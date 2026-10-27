@@ -14,26 +14,27 @@ type TaskRow = {
   member_name: string;
 };
 
-app.get("/tasks", async (c) => {
-  const rows: TaskRow[] = await sql`
+async function getTasks(): Promise<TaskRow[]>
+{
+   const rows: TaskRow[] = await sql`
     SELECT tasks.id, tasks.title, tasks.status,
            tasks.due_date::text AS due_date,
            members.name AS member_name
     FROM tasks
     LEFT JOIN members ON tasks.member_id = members.id
   `;
+  return rows;
+}
+
+app.get("/tasks", async (c) => {
+  const rows: TaskRow[] = await getTasks();
   return c.json(rows);
 });
 
 app.get("/ai/summary", async (c) => {
   const today = new Date().toISOString().slice(0, 10);
-  const rows: TaskRow[] = await sql`
-    SELECT tasks.id, tasks.title, tasks.status,
-           tasks.due_date::text AS due_date,
-           members.name AS member_name
-    FROM tasks
-    LEFT JOIN members ON tasks.member_id = members.id
-  `;
+  const rows: TaskRow[] = await getTasks();
+
   const prompt = `Today is ${today}. You are a team management assistant.
 Team tasks (JSON): ${JSON.stringify(rows)}
 
@@ -46,8 +47,10 @@ In up to 5 lines, tell me:
     model: MODEL,
     contents: prompt,
   });
-  return c.json({ summary: response.text, date: today });
-});
+  return c.json({ summary: response.text, date: today, rows });
+})
+  
+
 
 app.post("/ai/ask", async (c) => {
   const body = await c.req.json();
