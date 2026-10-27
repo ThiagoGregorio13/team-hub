@@ -23,6 +23,25 @@ app.get("/tasks", async (c) => {
   return c.json(rows);
 });
 
+app.get("/ai/summary", async (c) => {
+  
+    const today = new Date().toISOString().slice(0 , 10);
+const rows = await sql`SELECT tasks.id, tasks.title, tasks.status,tasks.due_date::text AS due_date, members.name AS member_name FROM tasks LEFT JOIN members ON tasks.member_id = members.id`;
+  const prompt = `Hoje é ${today}. Você é assistente de gestão de um time.
+Tarefas do time (JSON): ${JSON.stringify(rows)}
+
+Em até 5 linhas, diga:
+- quais tarefas estão ATRASADAS (due_date antes de hoje e status diferente de done) e de quem são
+- quem está mais carregado
+- uma sugestão prática para o gestor
+`;
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: prompt,
+  });
+  return c.json({ summary: response.text, date: today });
+});
+
 app.post('/ai/ask', async (c) => {
 const body = await c.req.json();
 const response = await ai.models.generateContent({
