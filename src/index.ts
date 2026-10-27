@@ -30,7 +30,7 @@ async function getTaskByMember(member_name: string): Promise<TaskRow[]> {
   SELECT tasks.id, tasks.title, tasks.status, tasks.due_date::text AS due_date, members.name AS member_name
   FROM tasks
   LEFT JOIN members ON tasks.member_id = members.id
-  WHERE members.name = ${member_name}
+  WHERE UPPER(members.name) = UPPER(${member_name})
   `;
   return rows;
 }
@@ -94,10 +94,36 @@ app.post("/ai/chat", async (c) => {
     });
 
     const call = response.functionCalls?.[0];
-    if (call?.name === "get_tasks_by_name") {
+    if (call?.name === "get_tasks_by_member") {
       const member_name = call.args?.member_name as string;
       const data = await getTaskByMember(member_name);
-      return c.json({ tool: call.name, args: call.args, data: data });
+      const finalResponse = await ai.models.generateContent({
+        model: MODEL,
+        contents: [
+          { role: "user", parts: [{ text: body.question }] },
+          response.candidates![0].content!,
+          {
+            role: "user",
+            parts: [
+              {
+                functionResponse: {
+                  name: call.name,
+                  response: { result: data },
+                },
+              },
+            ],
+          },
+        ],
+        config: {
+          tools: [{ functionDeclarations: [getTasksByMemberDeclaration] }],
+        },
+      });
+      return c.json({
+        tool: call.name,
+        args: call.args,
+        answer: finalResponse.text,
+        data,
+      });
     }
 
     return c.json({
