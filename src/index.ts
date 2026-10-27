@@ -14,9 +14,8 @@ type TaskRow = {
   member_name: string;
 };
 
-async function getTasks(): Promise<TaskRow[]>
-{
-   const rows: TaskRow[] = await sql`
+async function getTasks(): Promise<TaskRow[]> {
+  const rows: TaskRow[] = await sql`
     SELECT tasks.id, tasks.title, tasks.status,
            tasks.due_date::text AS due_date,
            members.name AS member_name
@@ -43,22 +42,31 @@ In up to 5 lines, tell me:
 - who has the heaviest workload
 - one practical suggestion for the manager
 `;
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: prompt,
-  });
-  return c.json({ summary: response.text, date: today, rows });
-})
-  
 
+  try {
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: prompt,
+    });
+    return c.json({ summary: response.text, date: today, rows: rows });
+  } catch (error) {
+    console.error("Error generating summary", error);
+    return c.json({ error: "Failed to generate summary" }, 503);
+  }
+});
 
 app.post("/ai/ask", async (c) => {
   const body = await c.req.json();
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: `Answer this question in up to 3 lines: ${body.question}`,
-  });
-  return c.json({ answer: response.text });
+  try {
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: `Answer this question in up to 3 lines: ${body.question}`,
+    });
+    return c.json({ answer: response.text });
+  } catch (error) {
+    console.error("Error generating answer", error);
+    return c.json({ error: "Failed to generate answer" }, 503);
+  }
 });
 
 export default app;
