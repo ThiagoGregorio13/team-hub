@@ -19,6 +19,10 @@ type TaskRow = {
   member_name: string;
 };
 
+type StatusCount = { status: string; total: number };
+type MemberCount = { name: string; total: number };
+
+
 async function getTasks(): Promise<TaskRow[]> {
   const rows: TaskRow[] = await sql`
     SELECT tasks.id, tasks.title, tasks.status,
@@ -47,6 +51,20 @@ async function getOverdueTasks(): Promise<TaskRow[]> {
   LEFT JOIN members ON tasks.member_id = members.id
   WHERE tasks.due_date < CURRENT_DATE 
   AND tasks.status <> 'done'
+  `;
+  return rows;
+}
+
+async function getStatsByStatus(): Promise<StatusCount[]> {
+    const rows: StatusCount[] = await sql`
+   SELECT status, COUNT(tasks.member_id):: int AS total FROM tasks GROUP BY status;
+  `;
+  return rows;
+}
+
+async function getStatsByMember(): Promise<MemberCount[]> {
+    const rows: MemberCount[] = await sql`
+   SELECT name, COUNT(tasks.member_id):: int AS total FROM members LEFT JOIN tasks  ON tasks.member_id = members.id GROUP BY members.name;
   `;
   return rows;
 }
@@ -189,5 +207,15 @@ app.post("/ai/ask", async (c) => {
     return c.json({ error: "Failed to generate answer" }, 503);
   }
 });
+
+app.get("/stats/by-status", async (c)=> {
+const rows: StatusCount[] = await getStatsByStatus();
+  return c.json(rows);
+})
+
+app.get("/stats/by-member", async (c)=> {
+  const rows: MemberCount[] = await getStatsByMember();
+  return c.json(rows);
+})
 
 export default app;
