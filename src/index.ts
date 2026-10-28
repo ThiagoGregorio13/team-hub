@@ -4,7 +4,7 @@ import { GoogleGenAI, Type, type FunctionDeclaration } from "@google/genai";
 
 const app = new Hono();
 const ai = new GoogleGenAI({});
-const MODEL = "gemini-3-flash-preview";
+const MODEL = "gemini-3.1-flash-lite";
 
 type TaskRow = {
   id: number;
@@ -31,6 +31,17 @@ async function getTaskByMember(member_name: string): Promise<TaskRow[]> {
   FROM tasks
   LEFT JOIN members ON tasks.member_id = members.id
   WHERE UPPER(members.name) = UPPER(${member_name})
+  `;
+  return rows;
+}
+
+async function getOverdueTasks(): Promise<TaskRow[]> {
+  const rows: TaskRow[] = await sql`
+  SELECT tasks.id, tasks.title, tasks.status, tasks.due_date::text AS due_date, members.name AS member_name
+  FROM tasks
+  LEFT JOIN members ON tasks.member_id = members.id
+  WHERE tasks.due_date < CURRENT_DATE 
+  AND tasks.status <> 'done'
   `;
   return rows;
 }
@@ -65,16 +76,28 @@ In up to 5 lines, tell me:
   }
 });
 
+const getOverdueTasksDeclaration: FunctionDeclaration = {
+  name: "get_overdue_tasks",
+  description:
+    "Returns every task in the whole team that is overdue: due date before today and status not 'done'. " +
+    "Use this for any question about overdue, late or delayed tasks, for the whole team or for a specific member. " +
+    "Takes no arguments.",
+};
+
 const getTasksByMemberDeclaration: FunctionDeclaration = {
   name: "get_tasks_by_member",
-  description: "a member's tasks.",
+  description:
+    "Returns all tasks (any status and due date) assigned to ONE specific team member. " +
+    "Only use this when the user mentions a member by name. " +
+    "Do not use it to list tasks of the whole team, and do not use it for overdue tasks (use get_overdue_tasks instead).",
   parameters: {
     type: Type.OBJECT,
-
     properties: {
       member_name: {
         type: Type.STRING,
-        description: "The name of the member whose tasks to retrieve.",
+        description:
+          "The exact name of one team member as written by the user, e.g. 'Pedro'. " +
+          "Never use placeholder values like 'all', 'everyone' or 'team'.",
       },
     },
     required: ["member_name"],
@@ -89,14 +112,29 @@ app.post("/ai/chat", async (c) => {
       model: MODEL,
       contents: body.question,
       config: {
-        tools: [{ functionDeclarations: [getTasksByMemberDeclaration] }],
+        tools: [
+          {
+            functionDeclarations: [
+              getTasksByMemberDeclaration
+            ],
+          },
+        ],
       },
     });
 
     const call = response.functionCalls?.[0];
-    if (call?.name === "get_tasks_by_member") {
-      const member_name = call.args?.member_name as string;
-      const data = await getTaskByMember(member_name);
+    if (
+      call?.name === "get_tasks_by_member" ||
+      call?.name === "get_overdue_tasks"
+    ) {
+      let data;
+
+      if (call.name === "get_tasks_by_member") {
+        const member_name = call.args?.member_name as string;
+        data = await getTaskByMember(member_name);
+      } else {
+        data = await getOverdueTasks();
+      }
       const finalResponse = await ai.models.generateContent({
         model: MODEL,
         contents: [
@@ -115,7 +153,7 @@ app.post("/ai/chat", async (c) => {
           },
         ],
         config: {
-          tools: [{ functionDeclarations: [getTasksByMemberDeclaration] }],
+          tools: [{ functionDeclarations: [getTasksByMemberDeclaration,getOverdueTasksDeclaration ] }],
         },
       });
       return c.json({
