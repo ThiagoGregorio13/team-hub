@@ -1,122 +1,147 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import { AlertTriangle, CalendarDays, CircleDashed, Layers, Timer } from "lucide-react";
+import {
+  getAiSummary,
+  getStatsByMember,
+  getStatsByStatus,
+  getTasks,
+  isOverdue,
+  todayLocal,
+  type MemberCount,
+  type StatusCount,
+  type TaskRow,
+} from "./api";
+import { Header } from "./components/Header";
+import { KpiCard } from "./components/KpiCard";
+import { MemberChart } from "./components/MemberChart";
+import { StatusChart } from "./components/StatusChart";
+import { TeamPerformance } from "./components/TeamPerformance";
+import { OverdueTable } from "./components/OverdueTable";
+import { AiSummary, type AiState } from "./components/AiSummary";
+import { UpcomingDeadlines } from "./components/UpcomingDeadlines";
+import { CustomCursor } from "./components/CustomCursor";
+import "./App.css";
+
+type DashboardData = {
+  tasks: TaskRow[];
+  byStatus: StatusCount[];
+  byMember: MemberCount[];
+};
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [ai, setAi] = useState<AiState>({ kind: "idle" });
+
+  useEffect(() => {
+    // As 3 rotas em paralelo: só mostra a tela quando todas responderem
+    Promise.all([getTasks(), getStatsByStatus(), getStatsByMember()])
+      .then(([tasks, byStatus, byMember]) => setData({ tasks, byStatus, byMember }))
+      .catch((err) => {
+        console.error(err);
+        setError("Não foi possível carregar os dados. A API está rodando na porta 3000?");
+      });
+  }, []);
+
+  async function handleAnalyze() {
+    setAi({ kind: "loading" });
+    // Leva a tela até o card, para ver o ícone girando e o resultado
+    document.getElementById("ai-summary")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    try {
+      const result = await getAiSummary();
+      setAi({ kind: "done", summary: result.summary, date: result.date });
+    } catch (err) {
+      console.error(err);
+      setAi({
+        kind: "error",
+        message: "Não foi possível gerar o resumo agora. A IA pode estar sobrecarregada ou sem cota; tente de novo mais tarde.",
+      });
+    }
+  }
+
+  const todayLabel = new Date().toLocaleDateString("pt-BR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      <CustomCursor />
+      <Header onAnalyze={handleAnalyze} analyzing={ai.kind === "loading"} />
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      <main className="page">
+        <div className="page__intro">
+          <div>
+            <h1>Visão geral do time</h1>
+            <p className="page__subtitle">Acompanhe as entregas, o ritmo e as prioridades da equipe.</p>
+          </div>
+          <span className="page__date">
+            <CalendarDays size={16} aria-hidden="true" />
+            {todayLabel}
+          </span>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+        {error && <p className="card status-message status-message--error">{error}</p>}
+        {!error && !data && <p className="card status-message">Carregando dados do time...</p>}
+        {data && <Dashboard data={data} ai={ai} />}
+      </main>
     </>
-  )
+  );
 }
 
-export default App
+function Dashboard({ data, ai }: { data: DashboardData; ai: AiState }) {
+  const { tasks, byStatus, byMember } = data;
+
+  const countOf = (status: StatusCount["status"]) =>
+    byStatus.find((s) => s.status === status)?.total ?? 0;
+  const total = byStatus.reduce((sum, s) => sum + s.total, 0);
+
+  const today = todayLocal();
+  const overdue = tasks.filter((task) => isOverdue(task, today));
+
+  return (
+    <>
+      <section className="kpis" aria-label="Indicadores">
+        <KpiCard
+          label="Total de tarefas"
+          value={total}
+          hint={`Distribuídas entre ${byMember.length} membros`}
+          icon={<Layers size={16} />}
+        />
+        <KpiCard
+          label="Pendentes"
+          value={countOf("pending")}
+          hint="Aguardando início"
+          icon={<CircleDashed size={16} />}
+        />
+        <KpiCard
+          label="Em andamento"
+          value={countOf("in_progress")}
+          hint="Trabalho em movimento"
+          icon={<Timer size={16} />}
+        />
+        <KpiCard
+          label="Atrasadas"
+          value={overdue.length}
+          hint={overdue.length > 0 ? "Precisa de atenção" : "Tudo em dia"}
+          icon={<AlertTriangle size={16} />}
+          variant="alert"
+        />
+      </section>
+
+      <MemberChart members={byMember} tasks={tasks} today={today} />
+
+      <div className="split">
+        <StatusChart stats={byStatus} />
+        <UpcomingDeadlines tasks={tasks} today={today} />
+      </div>
+
+      <TeamPerformance members={byMember} tasks={tasks} />
+      <OverdueTable tasks={overdue} today={today} />
+      <AiSummary state={ai} />
+    </>
+  );
+}
+
+export default App;
