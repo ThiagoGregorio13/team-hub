@@ -104,6 +104,21 @@ const getTasksByMemberDeclaration: FunctionDeclaration = {
   },
 };
 
+const TOOLS = [
+  getTasksByMemberDeclaration, getOverdueTasksDeclaration
+]
+
+async function runTool(name: string, args: Record<string, unknown>) {
+  if (name === "get_tasks_by_member") {
+    const member_name = args.member_name as string;
+    return await getTaskByMember(member_name);
+  }
+  if (name === "get_overdue_tasks") {
+    return await getOverdueTasks();
+  }
+  return { error: `Unknown command: ${name}` };
+}
+
 app.post("/ai/chat", async (c) => {
   const body = await c.req.json();
 
@@ -114,12 +129,12 @@ app.post("/ai/chat", async (c) => {
       config: {
         tools: [
           {
-            functionDeclarations: [
-              getTasksByMemberDeclaration
-            ],
-          },
-        ],
-      },
+            functionDeclarations: TOOLS
+          }
+        ]
+      }
+
+      
     });
 
     const call = response.functionCalls?.[0];
@@ -127,14 +142,8 @@ app.post("/ai/chat", async (c) => {
       call?.name === "get_tasks_by_member" ||
       call?.name === "get_overdue_tasks"
     ) {
-      let data;
+      const data = await runTool(call.name, call.args ?? {});
 
-      if (call.name === "get_tasks_by_member") {
-        const member_name = call.args?.member_name as string;
-        data = await getTaskByMember(member_name);
-      } else {
-        data = await getOverdueTasks();
-      }
       const finalResponse = await ai.models.generateContent({
         model: MODEL,
         contents: [
@@ -153,8 +162,10 @@ app.post("/ai/chat", async (c) => {
           },
         ],
         config: {
-          tools: [{ functionDeclarations: [getTasksByMemberDeclaration,getOverdueTasksDeclaration ] }],
-        },
+         tools: [{
+          functionDeclarations: TOOLS
+         }]
+            },
       });
       return c.json({
         tool: call.name,
