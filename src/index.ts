@@ -1,6 +1,11 @@
 import { Hono } from "hono";
 import { sql } from "bun";
-import { GoogleGenAI, Type, type FunctionDeclaration } from "@google/genai";
+import {
+  GoogleGenAI,
+  Type,
+  type FunctionDeclaration,
+  type Content,
+} from "@google/genai";
 
 const app = new Hono();
 const ai = new GoogleGenAI({});
@@ -65,7 +70,7 @@ In up to 5 lines, tell me:
 `;
 
   try {
-    const response = await ai.models.generateContent({
+    let response = await ai.models.generateContent({
       model: MODEL,
       contents: prompt,
     });
@@ -104,9 +109,7 @@ const getTasksByMemberDeclaration: FunctionDeclaration = {
   },
 };
 
-const TOOLS = [
-  getTasksByMemberDeclaration, getOverdueTasksDeclaration
-]
+const TOOLS = [getTasksByMemberDeclaration, getOverdueTasksDeclaration];
 
 async function runTool(name: string, args: Record<string, unknown>) {
   if (name === "get_tasks_by_member") {
@@ -123,61 +126,49 @@ app.post("/ai/chat", async (c) => {
   const body = await c.req.json();
 
   try {
-    const response = await ai.models.generateContent({
+    const contents: Content[] = [
+      { role: "user", parts: [{ text: body.question }] },
+    ];
+    const MAX_STEP = 5;
+    let steps = 0;
+    let response = await ai.models.generateContent({
       model: MODEL,
-      contents: body.question,
+      contents,
       config: {
         tools: [
           {
-            functionDeclarations: TOOLS
-          }
-        ]
-      }
-
-      
-    });
-
-    const call = response.functionCalls?.[0];
-    if (
-      call?.name === "get_tasks_by_member" ||
-      call?.name === "get_overdue_tasks"
-    ) {
-      const data = await runTool(call.name, call.args ?? {});
-
-      const finalResponse = await ai.models.generateContent({
-        model: MODEL,
-        contents: [
-          { role: "user", parts: [{ text: body.question }] },
-          response.candidates![0].content!,
-          {
-            role: "user",
-            parts: [
-              {
-                functionResponse: {
-                  name: call.name,
-                  response: { result: data },
-                },
-              },
-            ],
+            functionDeclarations: TOOLS,
           },
         ],
-        config: {
-         tools: [{
-          functionDeclarations: TOOLS
-         }]
+      },
+    });
+    while (response.functionCalls && steps < MAX_STEP) {
+      contents.push(response.candidates![0].content!);
+      for (const call of response.functionCalls) {
+        const data = await runTool(call.name ?? "", call.args ?? {});
+        contents.push({
+          role: "user",
+          parts: [
+            {
+              functionResponse: {
+                name: call.name,
+                response: { result: data },
+              },
             },
+          ],
+        });
+      }
+      response = await ai.models.generateContent({
+        model: MODEL,
+        contents,
+        config: { tools: [{ functionDeclarations: TOOLS }] },
       });
-      return c.json({
-        tool: call.name,
-        args: call.args,
-        answer: finalResponse.text,
-        data,
-      });
+      steps++;
     }
 
     return c.json({
       text: response.text,
-      functionCalls: response.functionCalls,
+      steps,
     });
   } catch (error) {
     console.error("Error generating chat response", error);
