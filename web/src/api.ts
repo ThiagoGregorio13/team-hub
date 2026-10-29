@@ -9,6 +9,10 @@ export type TaskRow = {
   member_name: string;
 };
 
+export type DeliveryTime = {
+  avg_hours: number | null
+}
+
 export type StatusCount = { status: Status; total: number };
 export type MemberCount = { name: string; total: number };
 
@@ -30,6 +34,7 @@ export const getStatsByStatus = () => get<StatusCount[]>("/stats/by-status");
 export const getStatsByMember = () => get<MemberCount[]>("/stats/by-member");
 export const getAiSummary = () => get<AiSummary>("/ai/summary");
 export const getOverdueTasks = () => get<TaskRow[]>("/tasks/overdue");
+export const getDeliveryTime = () => get<DeliveryTime>("/stats/delivery-time")
 export const STATUS_LABEL: Record<Status, string> = {
   pending: "Pendente",
   in_progress: "Em andamento",
@@ -81,4 +86,13 @@ export function describeDue(task: TaskRow, today: string): string {
   if (days === 0) return "vence hoje";
   if (days === 1) return "vence amanhã";
   return `vence em ${days} dias`;
+}
+
+export function formatDuration(hours:number): string {
+  const days = Math.floor(hours/24)
+  const rest = Math.round(days % 24)
+
+  if(days === 0 ) return `${rest} h`
+  if(rest === 0 ) return plural(days, "dia")
+return `${plural(days, "dia")} e ${rest} h`;
 }

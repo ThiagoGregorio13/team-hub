@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 type KpiCardProps = {
   label: string;
-  value: number;
+  value: number | string;
   hint: string;
   icon: ReactNode;
   variant?: "default" | "alert";

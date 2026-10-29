@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, CalendarDays, CircleDashed, Layers, Timer } from "lucide-react";
+import { AlertTriangle, CalendarDays, CircleDashed, Clock, Layers, Timer } from "lucide-react";
 import {
   getAiSummary,
   getStatsByMember,
@@ -10,6 +10,9 @@ import {
   type MemberCount,
   type StatusCount,
   type TaskRow,
+  type DeliveryTime,
+  getDeliveryTime,
+  formatDuration,
 } from "./api";
 import { Header } from "./components/Header";
 import { KpiCard } from "./components/KpiCard";
@@ -27,6 +30,7 @@ type DashboardData = {
   byStatus: StatusCount[];
   byMember: MemberCount[];
   overdue: TaskRow[];
+  delivery: DeliveryTime;
 };
 
 function App() {
@@ -36,8 +40,8 @@ function App() {
 
   useEffect(() => {
     // As 4 rotas em paralelo: só mostra a tela quando todas responderem
-    Promise.all([getTasks(), getStatsByStatus(), getStatsByMember(), getOverdueTasks()])
-      .then(([tasks, byStatus, byMember, overdue]) => setData({ tasks, byStatus, byMember, overdue }))
+    Promise.all([getTasks(), getStatsByStatus(), getStatsByMember(), getOverdueTasks(), getDeliveryTime()])
+      .then(([tasks, byStatus, byMember, overdue, delivery]) => setData({ tasks, byStatus, byMember, overdue, delivery }))
       .catch((err) => {
         console.error(err);
         setError("Não foi possível carregar os dados. A API está rodando na porta 3000?");
@@ -92,12 +96,11 @@ function App() {
 }
 
 function Dashboard({ data, ai }: { data: DashboardData; ai: AiState }) {
-  const { tasks, byStatus, byMember, overdue } = data;
+  const { tasks, byStatus, byMember, overdue, delivery, } = data;
 
   const countOf = (status: StatusCount["status"]) =>
     byStatus.find((s) => s.status === status)?.total ?? 0;
   const total = byStatus.reduce((sum, s) => sum + s.total, 0);
-
   const today = todayLocal();
   return (
     <>
@@ -126,6 +129,12 @@ function Dashboard({ data, ai }: { data: DashboardData; ai: AiState }) {
           hint={overdue.length > 0 ? "Precisa de atenção" : "Tudo em dia"}
           icon={<AlertTriangle size={16} />}
           variant="alert"
+        />
+        <KpiCard
+        label="Tempo médio para entregar"
+hint="Das tarefas concluidas"
+icon= {<Clock size={16}/>}
+        value={delivery.avg_hours === null ? "-" : formatDuration(delivery.avg_hours)}
         />
       </section>
 
