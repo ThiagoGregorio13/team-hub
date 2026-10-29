@@ -29,7 +29,7 @@ export const getTasks = () => get<TaskRow[]>("/tasks");
 export const getStatsByStatus = () => get<StatusCount[]>("/stats/by-status");
 export const getStatsByMember = () => get<MemberCount[]>("/stats/by-member");
 export const getAiSummary = () => get<AiSummary>("/ai/summary");
-
+export const getOverdueTasks = () => get<TaskRow[]>("/tasks/overdue");
 export const STATUS_LABEL: Record<Status, string> = {
   pending: "Pendente",
   in_progress: "Em andamento",
@@ -54,6 +54,7 @@ export function formatDate(isoDate: string): string {
   return `${day}/${month}/${year}`;
 }
 
+// Mesma regra do getOverdueTasks() da API; o MemberChart usa para pintar a data de vinho
 export function isOverdue(task: TaskRow, today: string): boolean {
   return task.due_date < today && task.status !== "done";
 }

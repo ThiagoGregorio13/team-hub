@@ -4,8 +4,8 @@ import {
   getAiSummary,
   getStatsByMember,
   getStatsByStatus,
+  getOverdueTasks,
   getTasks,
-  isOverdue,
   todayLocal,
   type MemberCount,
   type StatusCount,
@@ -26,6 +26,7 @@ type DashboardData = {
   tasks: TaskRow[];
   byStatus: StatusCount[];
   byMember: MemberCount[];
+  overdue: TaskRow[];
 };
 
 function App() {
@@ -34,9 +35,9 @@ function App() {
   const [ai, setAi] = useState<AiState>({ kind: "idle" });
 
   useEffect(() => {
-    // As 3 rotas em paralelo: só mostra a tela quando todas responderem
-    Promise.all([getTasks(), getStatsByStatus(), getStatsByMember()])
-      .then(([tasks, byStatus, byMember]) => setData({ tasks, byStatus, byMember }))
+    // As 4 rotas em paralelo: só mostra a tela quando todas responderem
+    Promise.all([getTasks(), getStatsByStatus(), getStatsByMember(), getOverdueTasks()])
+      .then(([tasks, byStatus, byMember, overdue]) => setData({ tasks, byStatus, byMember, overdue }))
       .catch((err) => {
         console.error(err);
         setError("Não foi possível carregar os dados. A API está rodando na porta 3000?");
@@ -91,15 +92,13 @@ function App() {
 }
 
 function Dashboard({ data, ai }: { data: DashboardData; ai: AiState }) {
-  const { tasks, byStatus, byMember } = data;
+  const { tasks, byStatus, byMember, overdue } = data;
 
   const countOf = (status: StatusCount["status"]) =>
     byStatus.find((s) => s.status === status)?.total ?? 0;
   const total = byStatus.reduce((sum, s) => sum + s.total, 0);
 
   const today = todayLocal();
-  const overdue = tasks.filter((task) => isOverdue(task, today));
-
   return (
     <>
       <section className="kpis" aria-label="Indicadores">
