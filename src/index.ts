@@ -240,6 +240,14 @@ app.get("/stats/delivery-time", async (c) => {
   return c.json(rows[0]);
 })
 
+app.patch("/tasks/:id", async (c) => {
+  const id = Number(c.req.param("id"))
+  const body = await c.req.json()
 
+  const rows = await sql `
+  UPDATE tasks SET status = ${body.status} WHERE id = ${id}
+  RETURNING  id, title, status, member_id`
+  return c.json(rows[0])
+})
 
 export default app;
