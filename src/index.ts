@@ -74,6 +74,11 @@ app.get("/tasks", async (c) => {
   return c.json(rows);
 });
 
+app.get("/tasks/overdue", async (c) => {
+   const rows: TaskRow[] = await getOverdueTasks();
+  return c.json(rows);
+})
+
 app.get("/ai/summary", async (c) => {
   const today = new Date().toISOString().slice(0, 10);
   const rows: TaskRow[] = await getTasks();
@@ -217,5 +222,7 @@ app.get("/stats/by-member", async (c)=> {
   const rows: MemberCount[] = await getStatsByMember();
   return c.json(rows);
 })
+
+
 
 export default app;
