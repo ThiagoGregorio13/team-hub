@@ -132,7 +132,7 @@ function Dashboard({ data, ai }: { data: DashboardData; ai: AiState }) {
         />
         <KpiCard
         label="Tempo médio para entregar"
-hint="Das tarefas concluidas"
+hint="Das tarefas concluídas"
 icon= {<Clock size={16}/>}
         value={delivery.avg_hours === null ? "-" : formatDuration(delivery.avg_hours)}
         />

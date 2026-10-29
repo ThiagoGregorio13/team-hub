@@ -90,7 +90,7 @@ export function describeDue(task: TaskRow, today: string): string {
 
 export function formatDuration(hours:number): string {
   const days = Math.floor(hours/24)
-  const rest = Math.round(days % 24)
+  const rest = Math.round(hours % 24)
 
   if(days === 0 ) return `${rest} h`
   if(rest === 0 ) return plural(days, "dia")
