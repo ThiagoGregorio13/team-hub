@@ -41,7 +41,7 @@ export function CustomCursor() {
   return (
     <div ref={ref} className="cursor cursor--hidden" aria-hidden="true">
       <span className="cursor__dot" />
-      <span className="cursor__label">JOÃO ROCK</span>
+      <span className="cursor__label">TEAM</span>
     </div>
   );
 }

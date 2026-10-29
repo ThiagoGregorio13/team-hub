@@ -12,7 +12,7 @@ export function Header({ onAnalyze, analyzing }: HeaderProps) {
         <span className="header__logo" aria-hidden="true">
           <LayoutDashboard size={18} />
         </span>
-        <span className="header__name">JOÃO ROCK</span>
+        <span className="header__name">TEAM</span>
         <span className="header__divider" aria-hidden="true" />
         <span className="header__tagline">Seu time, em sintonia.</span>
       </div>
