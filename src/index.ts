@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { sql } from "bun";
 import {
   GoogleGenAI,
@@ -8,6 +9,8 @@ import {
 } from "@google/genai";
 
 const app = new Hono();
+app.use("*", cors({origin: process.env.FRONTEND_URL ?? "http://localhost:5173"
+}))
 const ai = new GoogleGenAI({});
 const MODEL = "gemini-3.1-flash-lite";
 
@@ -153,6 +156,7 @@ async function runTool(name: string, args: Record<string, unknown>) {
   return { error: `Unknown command: ${name}` };
 }
 
+
 app.post("/ai/chat", async (c) => {
   const body = await c.req.json();
 
@@ -235,6 +239,7 @@ app.get("/stats/delivery-time", async (c) => {
    const rows: DeliveryTime[] = await getStatsByAvgHours();
   return c.json(rows[0]);
 })
+
 
 
 export default app;
