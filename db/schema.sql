@@ -8,5 +8,7 @@ CREATE TABLE tasks(
   title TEXT NOT NULL,
   member_id INTEGER NOT NULL REFERENCES members(id),
   status TEXT NOT NULL,
-  due_date DATE NOT NULL
+  due_date DATE NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at TIMESTAMPTZ
 );

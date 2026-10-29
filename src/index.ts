@@ -21,7 +21,7 @@ type TaskRow = {
 
 type StatusCount = { status: string; total: number };
 type MemberCount = { name: string; total: number };
-
+type DeliveryTime = {avg_hours: number}
 
 async function getTasks(): Promise<TaskRow[]> {
   const rows: TaskRow[] = await sql`
@@ -67,6 +67,14 @@ async function getStatsByMember(): Promise<MemberCount[]> {
    SELECT name, COUNT(tasks.member_id):: int AS total FROM members LEFT JOIN tasks  ON tasks.member_id = members.id GROUP BY members.name;
   `;
   return rows;
+}
+
+async function getStatsByAvgHours(): Promise<DeliveryTime[]>{
+  const rows: DeliveryTime[] = await sql`
+  SELECT (EXTRACT(EPOCH FROM AVG(completed_at - created_at)) / 3600)::float AS avg_hours
+    FROM tasks
+    WHERE status = 'done'`;
+  return rows
 }
 
 app.get("/tasks", async (c) => {
@@ -223,6 +231,10 @@ app.get("/stats/by-member", async (c)=> {
   return c.json(rows);
 })
 
+app.get("/stats/delivery-time", async (c) => {
+   const rows: DeliveryTime[] = await getStatsByAvgHours();
+  return c.json(rows[0]);
+})
 
 
 export default app;
