@@ -261,11 +261,21 @@ app.post("/tasks", async (c) => {
     return c.json({error: "title is required"}, 400)
   }
   if(!body.member_id){
-    return c.json({error: "Username is required"}, 400)
+    return c.json({error: "member_id is required"}, 400)
   }
   if(!body.due_date){
     return c.json({error: "date is required"}, 400)
   }
+
+
+  const rows_select = await sql `
+  SELECT id FROM members
+WHERE id = ${body.member_id}`
+
+if(rows_select.length === 0){
+    return c.json({error: "member not found"}, 404)
+  }
+
 const rows = await sql `
  INSERT INTO tasks (title, status, member_id, due_date) VALUES (
       ${body.title},
