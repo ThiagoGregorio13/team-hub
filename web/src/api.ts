@@ -41,6 +41,20 @@ if(!res.ok) {
 return res.json()
 }
 
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`POST ${path} falhou com status ${res.status}`);
+  }
+  return res.json();
+}
+
+export type ChatAnswer = { text: string; steps: number };
+
 export const getTasks = () => get<TaskRow[]>("/tasks");
 export const getStatsByStatus = () => get<StatusCount[]>("/stats/by-status");
 export const getStatsByMember = () => get<MemberCount[]>("/stats/by-member");
@@ -48,6 +62,7 @@ export const getAiSummary = () => get<AiSummary>("/ai/summary");
 export const getOverdueTasks = () => get<TaskRow[]>("/tasks/overdue");
 export const getDeliveryTime = () => get<DeliveryTime>("/stats/delivery-time")
 export const patchStatus = (id:number, status:Status) => patch<{ id: number; status: Status }>(`/tasks/${id}`, {status})
+export const askTeam = (question: string) => post<ChatAnswer>("/ai/chat", { question });
 export const STATUS_LABEL: Record<Status, string> = {
   pending: "Pendente",
   in_progress: "Em andamento",
@@ -79,7 +94,7 @@ export function isOverdue(task: TaskRow, today: string): boolean {
 }
 
 // "2026-10-28" → número de dias desde 1970, sempre em UTC para a conta não depender do fuso
-function toDayNumber(isoDate: string): number {
+export function toDayNumber(isoDate: string): number {
   const [year, month, day] = isoDate.split("-").map(Number);
   return Date.UTC(year, month - 1, day) / 86_400_000;
 }
@@ -87,6 +102,15 @@ function toDayNumber(isoDate: string): number {
 // Positivo = faltam X dias; 0 = hoje; negativo = já passou
 export function daysUntil(dueDate: string, today: string): number {
   return toDayNumber(dueDate) - toDayNumber(today);
+}
+
+// No banco os nomes estão em maiúsculas ("PEDRO"); na tela fica "Pedro"
+export function displayName(name: string): string {
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+}
+
+export function percent(part: number, total: number): number {
+  return total === 0 ? 0 : Math.round((part / total) * 100);
 }
 
 export function plural(n: number, word: string): string {

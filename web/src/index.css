@@ -1,27 +1,38 @@
 :root {
   /* Paleta do Figma */
   --olive: #4b5320;
-  --olive-dark: #343a17;
+  --olive-700: #3c4219;
+  --olive-50: #eef0e2;
   --sunflower: #ffbe00;
+  --sunflower-50: #fff6d9;
   --cream: #f4f6de;
-  --card: #ffffff;
-  --text: #1a1a1a;
-  --text-muted: #5b6150;
-  --pending: #b9bca4;
   --wine: #5c083e;
-  --wine-soft: #f3e6ec;
-  --ai-soft: #fbf3dc;
-  --border: #e4e6d2;
+  --wine-50: #f7e8f0;
+  --pending: #b9bca4;
+  --pending-50: #f1f2ea;
 
-  --radius: 16px;
-  --shadow: 0 1px 2px rgba(26, 26, 26, 0.04), 0 4px 16px rgba(26, 26, 26, 0.04);
+  /* Neutros do layout (fundo levemente creme, cards brancos) */
+  --bg: #f6f7ef;
+  --surface: #ffffff;
+  --ink: #1b1d12;
+  --text: #3d4030;
+  --muted: #7a7e68;
+  --border: #e6e8dc;
+  --border-strong: #d6d9c8;
 
-  --font-display: "Space Grotesk", system-ui, sans-serif;
-  --font-body: "Inter", system-ui, sans-serif;
+  --radius-lg: 20px;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow-sm: 0 1px 2px rgba(27, 29, 18, 0.05);
+  --shadow: 0 1px 2px rgba(27, 29, 18, 0.04), 0 4px 12px rgba(27, 29, 18, 0.04);
+  --shadow-lg: 0 12px 32px -8px rgba(27, 29, 18, 0.18);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  font-family: var(--font-body);
+  --font: "Plus Jakarta Sans", system-ui, sans-serif;
+
+  font-family: var(--font);
   color: var(--text);
-  background: var(--cream);
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -31,17 +42,38 @@
 
 body {
   margin: 0;
-  background: var(--cream);
+  background: var(--bg);
 }
 
 h1,
 h2,
 h3 {
-  font-family: var(--font-display);
+  margin: 0;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+p {
   margin: 0;
 }
 
-button {
+button,
+input,
+select {
   font: inherit;
+  color: inherit;
+}
+
+button {
   cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--olive);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--sunflower);
+  color: var(--ink);
 }

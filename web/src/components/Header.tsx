@@ -1,26 +1,48 @@
-import { LayoutDashboard, Sparkles } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 
 type HeaderProps = {
-  onAnalyze: () => void;
-  analyzing: boolean;
+  query: string;
+  onQueryChange: (value: string) => void;
+  lateCount: number;
+  onShowLate: () => void;
+  onAsk: () => void;
 };
 
-export function Header({ onAnalyze, analyzing }: HeaderProps) {
+// Mostra "⌘K" no Mac e "Ctrl K" no resto
+const SHORTCUT = /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘K" : "Ctrl K";
+
+export function Header({ query, onQueryChange, lateCount, onShowLate, onAsk }: HeaderProps) {
+  const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+
   return (
     <header className="header">
-      <div className="header__brand">
-        <span className="header__logo" aria-hidden="true">
-          <LayoutDashboard size={18} />
-        </span>
-        <span className="header__name">TEAM</span>
-        <span className="header__divider" aria-hidden="true" />
-        <span className="header__tagline">Seu time, em sintonia.</span>
+      <div className="header__title">
+        <h1>Dashboard</h1>
+        <p className="header__date">{today}</p>
       </div>
 
-      <button className="btn-ai" onClick={onAnalyze} disabled={analyzing}>
-        <Sparkles size={16} aria-hidden="true" className={analyzing ? "spin" : undefined} />
-        {analyzing ? "Analisando..." : "Analisar com IA"}
-      </button>
+      {/* A busca filtra a tabela de tarefas */}
+      <label className="search">
+        <Search size={17} aria-hidden="true" />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => onQueryChange(e.target.value)}
+          placeholder="Buscar tarefa ou pessoa..."
+          aria-label="Buscar tarefa ou pessoa"
+        />
+      </label>
+
+      <div className="header__actions">
+        <button className="icon-button" onClick={onShowLate} aria-label={`${lateCount} tarefas atrasadas`}>
+          <Bell size={18} />
+          {lateCount > 0 && <span className="icon-button__badge">{lateCount}</span>}
+        </button>
+        <button className="button button--primary" onClick={onAsk}>
+          Perguntar à IA
+          <kbd>{SHORTCUT}</kbd>
+        </button>
+      </div>
     </header>
   );
 }

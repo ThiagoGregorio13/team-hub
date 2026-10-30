@@ -1,168 +1,166 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, CalendarDays, CircleDashed, Clock, Layers, Timer } from "lucide-react";
 import {
-  getAiSummary,
-  getStatsByMember,
-  getStatsByStatus,
-  getOverdueTasks,
-  getTasks,
-  todayLocal,
-  type MemberCount,
-  type StatusCount,
-  type TaskRow,
-  type DeliveryTime,
   getDeliveryTime,
-  formatDuration,
-  type Status,
+  getStatsByMember,
+  getTasks,
+  isOverdue,
   patchStatus,
+  todayLocal,
+  type DeliveryTime,
+  type MemberCount,
+  type Status,
+  type TaskRow,
 } from "./api";
+import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
-import { KpiCard } from "./components/KpiCard";
-import { MemberChart } from "./components/MemberChart";
-import { StatusChart } from "./components/StatusChart";
-import { TeamPerformance } from "./components/TeamPerformance";
-import { OverdueTable } from "./components/OverdueTable";
-import { AiSummary, type AiState } from "./components/AiSummary";
-import { UpcomingDeadlines } from "./components/UpcomingDeadlines";
-import { CustomCursor } from "./components/CustomCursor";
+import { StatCards } from "./components/StatCards";
+import { WorkloadChart } from "./components/WorkloadChart";
+import { StatusDonut } from "./components/StatusDonut";
+import { TaskTable, type TaskFilter } from "./components/TaskTable";
+import { Upcoming } from "./components/Upcoming";
+import { AiCard } from "./components/AiCard";
+import { Timeline } from "./components/Timeline";
+import { TaskDrawer } from "./components/TaskDrawer";
+import { AskTeam } from "./components/AskTeam";
 import "./App.css";
-import { TaskList } from "./components/TaskList";
 
 type DashboardData = {
   tasks: TaskRow[];
-  byStatus: StatusCount[];
-  byMember: MemberCount[];
-  overdue: TaskRow[];
+  members: MemberCount[];
   delivery: DeliveryTime;
 };
+
+// "closed" = fechado; "chat" = aberto para perguntar; "summary" = já abre gerando o resumo
+type AskMode = "closed" | "chat" | "summary";
 
 function App() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [ai, setAi] = useState<AiState>({ kind: "idle" });
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<TaskFilter>("all");
+  const [openTaskId, setOpenTaskId] = useState<number | null>(null);
+  const [ask, setAsk] = useState<AskMode>("closed");
 
   useEffect(() => {
-  loadData()
+    loadData();
   }, []);
 
-  function loadData(){
-      Promise.all([getTasks(), getStatsByStatus(), getStatsByMember(), getOverdueTasks(), getDeliveryTime()])
-      .then(([tasks, byStatus, byMember, overdue, delivery]) => setData({ tasks, byStatus, byMember, overdue, delivery }))
+  // Ctrl+K (ou ⌘K no Mac) abre e fecha o assistente
+  useEffect(() => {
+    function handleKey(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setAsk((mode) => (mode === "closed" ? "chat" : "closed"));
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
+
+  function loadData() {
+    Promise.all([getTasks(), getStatsByMember(), getDeliveryTime()])
+      .then(([tasks, members, delivery]) => setData({ tasks, members, delivery }))
       .catch((err) => {
         console.error(err);
         setError("Não foi possível carregar os dados. A API está rodando na porta 3000?");
       });
   }
 
- async function handleStatusChange(id:number, status:Status){
- await patchStatus(id, status)
-loadData()
-  }
-
-  async function handleAnalyze() {
-    setAi({ kind: "loading" });
-    // Leva a tela até o card, para ver o ícone girando e o resultado
-    document.getElementById("ai-summary")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  async function handleStatusChange(id: number, status: Status) {
+    // Otimista: a tela muda na hora e o PATCH confirma depois
+    setData((current) =>
+      current && { ...current, tasks: current.tasks.map((t) => (t.id === id ? { ...t, status } : t)) },
+    );
     try {
-      const result = await getAiSummary();
-      setAi({ kind: "done", summary: result.summary, date: result.date });
+      await patchStatus(id, status);
     } catch (err) {
       console.error(err);
-      setAi({
-        kind: "error",
-        message: "Não foi possível gerar o resumo agora. A IA pode estar sobrecarregada ou sem cota; tente de novo mais tarde.",
-      });
     }
+    // Recarrega de qualquer jeito: se o PATCH falhou, a tela volta ao que está no banco
+    loadData();
   }
 
-  const todayLabel = new Date().toLocaleDateString("pt-BR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  // O sino do header leva direto para a aba "Atrasadas" da tabela
+  function showLate() {
+    setFilter("late");
+    document.getElementById("tasks")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  const today = todayLocal();
+  const openTask = data?.tasks.find((t) => t.id === openTaskId) ?? null;
+  const lateCount = data?.tasks.filter((t) => isOverdue(t, today)).length ?? 0;
 
   return (
-    <>
-      <CustomCursor />
-      <Header onAnalyze={handleAnalyze} analyzing={ai.kind === "loading"} />
+    <div className="layout">
+      <Sidebar onAsk={() => setAsk("chat")} />
 
-      <main className="page">
-        <div className="page__intro">
-          <div>
-            <h1>Visão geral do time</h1>
-            <p className="page__subtitle">Acompanhe as entregas, o ritmo e as prioridades da equipe.</p>
-          </div>
-          <span className="page__date">
-            <CalendarDays size={16} aria-hidden="true" />
-            {todayLabel}
-          </span>
-        </div>
+      <div className="main">
+        <Header
+          query={query}
+          onQueryChange={setQuery}
+          lateCount={lateCount}
+          onShowLate={showLate}
+          onAsk={() => setAsk("chat")}
+        />
 
-        {error && <p className="card status-message status-message--error">{error}</p>}
-        {!error && !data && <p className="card status-message">Carregando dados do time...</p>}
-        {data && <Dashboard data={data} ai={ai} onStatusChange = {handleStatusChange} />}
-      </main>
-    </>
+        <main className="content" id="overview">
+          {error && <p className="notice">{error}</p>}
+          {!error && !data && <Skeleton />}
+          {data && (
+            <>
+              <StatCards tasks={data.tasks} members={data.members} today={today} />
+
+              <div className="grid grid--wide-left">
+                <WorkloadChart members={data.members} tasks={data.tasks} />
+                <StatusDonut tasks={data.tasks} delivery={data.delivery} />
+              </div>
+
+              <div className="grid grid--wide-left">
+                <TaskTable
+                  tasks={data.tasks}
+                  members={data.members}
+                  today={today}
+                  query={query}
+                  filter={filter}
+                  onFilterChange={setFilter}
+                  onStatusChange={handleStatusChange}
+                  onOpenTask={setOpenTaskId}
+                />
+                <div className="stack">
+                  <Upcoming tasks={data.tasks} members={data.members} today={today} onOpenTask={setOpenTaskId} />
+                  <AiCard onAsk={() => setAsk("summary")} />
+                </div>
+              </div>
+
+              <Timeline tasks={data.tasks} members={data.members} today={today} onOpenTask={setOpenTaskId} />
+            </>
+          )}
+        </main>
+      </div>
+
+      <TaskDrawer
+        task={openTask}
+        today={today}
+        onClose={() => setOpenTaskId(null)}
+        onStatusChange={handleStatusChange}
+      />
+      <AskTeam open={ask !== "closed"} startWithSummary={ask === "summary"} onClose={() => setAsk("closed")} />
+    </div>
   );
 }
 
-function Dashboard({ data, ai, onStatusChange }: { data: DashboardData, ai: AiState, onStatusChange: (id:number, status:Status) => void }) {
-  const { tasks, byStatus, byMember, overdue, delivery, } = data;
-
-  const countOf = (status: StatusCount["status"]) =>
-    byStatus.find((s) => s.status === status)?.total ?? 0;
-  const total = byStatus.reduce((sum, s) => sum + s.total, 0);
-  const today = todayLocal();
+// Enquanto carrega: blocos cinza no formato dos cards
+function Skeleton() {
   return (
-    <>
-      <section className="kpis" aria-label="Indicadores">
-        <KpiCard
-          label="Total de tarefas"
-          value={total}
-          hint={`Distribuídas entre ${byMember.length} membros`}
-          icon={<Layers size={16} />}
-        />
-        <KpiCard
-          label="Pendentes"
-          value={countOf("pending")}
-          hint="Aguardando início"
-          icon={<CircleDashed size={16} />}
-        />
-        <KpiCard
-          label="Em andamento"
-          value={countOf("in_progress")}
-          hint="Trabalho em movimento"
-          icon={<Timer size={16} />}
-        />
-        <KpiCard
-          label="Atrasadas"
-          value={overdue.length}
-          hint={overdue.length > 0 ? "Precisa de atenção" : "Tudo em dia"}
-          icon={<AlertTriangle size={16} />}
-          variant="alert"
-        />
-        <KpiCard
-        label="Tempo médio para entregar"
-hint="Das tarefas concluídas"
-icon= {<Clock size={16}/>}
-        value={delivery.avg_hours === null ? "-" : formatDuration(delivery.avg_hours)}
-        />
-      </section>
-
-      <MemberChart members={byMember} tasks={tasks} today={today} />
-
-      <div className="split">
-        <StatusChart stats={byStatus} />
-        <UpcomingDeadlines tasks={tasks} today={today} />
+    <div className="skeleton" role="status" aria-label="Carregando dados do time">
+      <div className="skeleton__row">
+        <span />
+        <span />
+        <span />
+        <span />
       </div>
-
-      <TeamPerformance members={byMember} tasks={tasks} />
-      <OverdueTable tasks={overdue} today={today} />
-      <AiSummary state={ai} />
-
-<TaskList tasks={tasks} onTaskChange={onStatusChange} />
-
-    </>
+      <span className="skeleton__big" />
+    </div>
   );
 }
 
