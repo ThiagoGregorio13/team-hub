@@ -9,6 +9,11 @@ export type TaskRow = {
   member_name: string;
 };
 
+export type Member = {
+    name: string;
+id: number;
+}
+
 export type DeliveryTime = {
   avg_hours: number | null
 }
@@ -63,6 +68,8 @@ export const getOverdueTasks = () => get<TaskRow[]>("/tasks/overdue");
 export const getDeliveryTime = () => get<DeliveryTime>("/stats/delivery-time")
 export const patchStatus = (id:number, status:Status) => patch<{ id: number; status: Status }>(`/tasks/${id}`, {status})
 export const askTeam = (question: string) => post<ChatAnswer>("/ai/chat", { question });
+export const getMembers = () => get<Member[]>("/members")
+export const createTask = (title:string, member_id: number, due_date: string) => post<{id: number}>("/tasks", {title, member_id, due_date})
 export const STATUS_LABEL: Record<Status, string> = {
   pending: "Pendente",
   in_progress: "Em andamento",
