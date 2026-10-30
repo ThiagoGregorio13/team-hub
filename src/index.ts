@@ -240,6 +240,20 @@ app.get("/stats/delivery-time", async (c) => {
   return c.json(rows[0]);
 })
 
+app.patch("/tasks/:id", async (c) => {
+  const id = Number(c.req.param("id"))
+  const body = await c.req.json()
 
+const values = ["done", "pending", "in_progress"]
+
+if(!values.includes(body.status)){
+  return c.json({error: "invalid status"}, 400)
+}
+
+  const rows = await sql `
+  UPDATE tasks SET status = ${body.status}, completed_at = CASE WHEN ${body.status} = 'done' THEN now() ELSE NULL END WHERE id = ${id}
+  RETURNING  id, title, status, member_id, completed_at`
+  return c.json(rows[0])
+})
 
 export default app;

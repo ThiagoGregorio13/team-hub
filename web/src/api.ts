@@ -29,17 +29,31 @@ async function get<T>(path: string): Promise<T> {
   return res.json();
 }
 
+async function patch<T>(path:string, body:unknown): Promise<T> {
+const res = await fetch(`${API_URL}${path}`, {
+  method: "PATCH",
+  headers: {"Content-type": "application/json"},
+  body: JSON.stringify(body)
+})
+if(!res.ok) {
+      throw new Error(`PATCH ${path} falhou com status ${res.status}`);
+}
+return res.json()
+}
+
 export const getTasks = () => get<TaskRow[]>("/tasks");
 export const getStatsByStatus = () => get<StatusCount[]>("/stats/by-status");
 export const getStatsByMember = () => get<MemberCount[]>("/stats/by-member");
 export const getAiSummary = () => get<AiSummary>("/ai/summary");
 export const getOverdueTasks = () => get<TaskRow[]>("/tasks/overdue");
 export const getDeliveryTime = () => get<DeliveryTime>("/stats/delivery-time")
+export const patchStatus = (id:number, status:Status) => patch<{ id: number; status: Status }>(`/tasks/${id}`, {status})
 export const STATUS_LABEL: Record<Status, string> = {
   pending: "Pendente",
   in_progress: "Em andamento",
   done: "Concluída",
 };
+
 
 // Mesma ordem em todos os gráficos e legendas
 export const STATUS_ORDER: Status[] = ["pending", "in_progress", "done"];
