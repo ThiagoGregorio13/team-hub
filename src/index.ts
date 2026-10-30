@@ -9,8 +9,10 @@ import {
 } from "@google/genai";
 
 const app = new Hono();
-app.use("*", cors({origin: process.env.FRONTEND_URL ?? "http://localhost:5173"
-}))
+app.use(
+  "*",
+  cors({ origin: process.env.FRONTEND_URL ?? "http://localhost:5173" }),
+);
 const ai = new GoogleGenAI({});
 const MODEL = "gemini-3.1-flash-lite";
 
@@ -24,7 +26,7 @@ type TaskRow = {
 
 type StatusCount = { status: string; total: number };
 type MemberCount = { name: string; total: number };
-type DeliveryTime = {avg_hours: number}
+type DeliveryTime = { avg_hours: number };
 
 async function getTasks(): Promise<TaskRow[]> {
   const rows: TaskRow[] = await sql`
@@ -59,25 +61,25 @@ async function getOverdueTasks(): Promise<TaskRow[]> {
 }
 
 async function getStatsByStatus(): Promise<StatusCount[]> {
-    const rows: StatusCount[] = await sql`
+  const rows: StatusCount[] = await sql`
    SELECT status, COUNT(tasks.member_id):: int AS total FROM tasks GROUP BY status;
   `;
   return rows;
 }
 
 async function getStatsByMember(): Promise<MemberCount[]> {
-    const rows: MemberCount[] = await sql`
+  const rows: MemberCount[] = await sql`
    SELECT name, COUNT(tasks.member_id):: int AS total FROM members LEFT JOIN tasks  ON tasks.member_id = members.id GROUP BY members.name;
   `;
   return rows;
 }
 
-async function getStatsByAvgHours(): Promise<DeliveryTime[]>{
+async function getStatsByAvgHours(): Promise<DeliveryTime[]> {
   const rows: DeliveryTime[] = await sql`
   SELECT (EXTRACT(EPOCH FROM AVG(completed_at - created_at)) / 3600)::float AS avg_hours
     FROM tasks
     WHERE status = 'done'`;
-  return rows
+  return rows;
 }
 
 app.get("/tasks", async (c) => {
@@ -86,9 +88,9 @@ app.get("/tasks", async (c) => {
 });
 
 app.get("/tasks/overdue", async (c) => {
-   const rows: TaskRow[] = await getOverdueTasks();
+  const rows: TaskRow[] = await getOverdueTasks();
   return c.json(rows);
-})
+});
 
 app.get("/ai/summary", async (c) => {
   const today = new Date().toISOString().slice(0, 10);
@@ -155,7 +157,6 @@ async function runTool(name: string, args: Record<string, unknown>) {
   }
   return { error: `Unknown command: ${name}` };
 }
-
 
 app.post("/ai/chat", async (c) => {
   const body = await c.req.json();
@@ -225,65 +226,71 @@ app.post("/ai/ask", async (c) => {
   }
 });
 
-app.get("/stats/by-status", async (c)=> {
-const rows: StatusCount[] = await getStatsByStatus();
+app.get("/stats/by-status", async (c) => {
+  const rows: StatusCount[] = await getStatsByStatus();
   return c.json(rows);
-})
+});
 
-app.get("/stats/by-member", async (c)=> {
+app.get("/stats/by-member", async (c) => {
   const rows: MemberCount[] = await getStatsByMember();
   return c.json(rows);
-})
+});
 
 app.get("/stats/delivery-time", async (c) => {
-   const rows: DeliveryTime[] = await getStatsByAvgHours();
+  const rows: DeliveryTime[] = await getStatsByAvgHours();
   return c.json(rows[0]);
-})
+});
 
 app.patch("/tasks/:id", async (c) => {
-  const id = Number(c.req.param("id"))
-  const body = await c.req.json()
+  const id = Number(c.req.param("id"));
+  const body = await c.req.json();
 
-const values = ["done", "pending", "in_progress"]
+  const values = ["done", "pending", "in_progress"];
 
-if(!values.includes(body.status)){
-  return c.json({error: "invalid status"}, 400)
-}
-  const rows = await sql `
+  if (!values.includes(body.status)) {
+    return c.json({ error: "invalid status" }, 400);
+  }
+  const rows = await sql`
   UPDATE tasks SET status = ${body.status}, completed_at = CASE WHEN ${body.status} = 'done' THEN now() ELSE NULL END WHERE id = ${id}
-  RETURNING  id, title, status, member_id, completed_at`
-  return c.json(rows[0])
-})
+  RETURNING  id, title, status, member_id, completed_at`;
+  return c.json(rows[0]);
+});
 
 app.post("/tasks", async (c) => {
-    const body = await c.req.json()
-  if(!body.title){
-    return c.json({error: "title is required"}, 400)
+  const body = await c.req.json();
+  if (!body.title) {
+    return c.json({ error: "title is required" }, 400);
   }
-  if(!body.member_id){
-    return c.json({error: "member_id is required"}, 400)
+  if (!body.member_id) {
+    return c.json({ error: "member_id is required" }, 400);
   }
-  if(!body.due_date){
-    return c.json({error: "date is required"}, 400)
+  if (!body.due_date) {
+    return c.json({ error: "date is required" }, 400);
   }
 
-
-  const rows_select = await sql `
+  const rows_select = await sql`
   SELECT id FROM members
-WHERE id = ${body.member_id}`
+WHERE id = ${body.member_id}`;
 
-if(rows_select.length === 0){
-    return c.json({error: "member not found"}, 404)
+  if (rows_select.length === 0) {
+    return c.json({ error: "member not found" }, 404);
   }
 
-const rows = await sql `
+  const rows = await sql`
  INSERT INTO tasks (title, status, member_id, due_date) VALUES (
       ${body.title},
  'pending',
     ${body.member_id},
     ${body.due_date}
-)  RETURNING  id, title, status, member_id`
-  return c.json(rows[0], 201)
-})
+)  RETURNING  id, title, status, member_id`;
+  return c.json(rows[0], 201);
+});
+
+app.get("/members", async (c) => {
+  const rows = await sql`
+ SELECT id, name FROM members ORDER BY name
+  `;
+  return c.json(rows);
+});
 
 export default app;
