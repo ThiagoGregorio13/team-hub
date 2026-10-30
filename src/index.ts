@@ -249,11 +249,22 @@ const values = ["done", "pending", "in_progress"]
 if(!values.includes(body.status)){
   return c.json({error: "invalid status"}, 400)
 }
-
   const rows = await sql `
   UPDATE tasks SET status = ${body.status}, completed_at = CASE WHEN ${body.status} = 'done' THEN now() ELSE NULL END WHERE id = ${id}
   RETURNING  id, title, status, member_id, completed_at`
   return c.json(rows[0])
+})
+
+app.post("/tasks", async (c) => {
+    const body = await c.req.json()
+const rows = await sql `
+ INSERT INTO tasks (title, status, member_id, due_date) VALUES (
+      ${body.title},
+ 'pending',
+    ${body.member_id},
+    ${body.due_date}
+)  RETURNING  id, title, status, member_id`
+  return c.json(rows[0], 201)
 })
 
 export default app;
