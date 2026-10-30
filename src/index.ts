@@ -257,6 +257,15 @@ if(!values.includes(body.status)){
 
 app.post("/tasks", async (c) => {
     const body = await c.req.json()
+  if(!body.title){
+    return c.json({error: "title is required"}, 400)
+  }
+  if(!body.member_id){
+    return c.json({error: "Username is required"}, 400)
+  }
+  if(!body.due_date){
+    return c.json({error: "date is required"}, 400)
+  }
 const rows = await sql `
  INSERT INTO tasks (title, status, member_id, due_date) VALUES (
       ${body.title},
