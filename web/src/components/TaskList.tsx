@@ -22,7 +22,6 @@ export function TaskList({
             {tasks.length} tarefa{tasks.length === 1 ? "" : "s"}
           </span>
         </div>
-        )
       </header>
 
       {tasks.length === 0 ? (
@@ -34,14 +33,13 @@ export function TaskList({
               <tr>
                 <th>Título</th>
                 <th>Responsável</th>
-                <th>Vencimento</th>           
-                     <th>Status</th>
+                <th>Vencimento</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {tasks.map((task) => (
                 <tr key={task.id}>
-               <td>
                   <td>
                     <span className="table__title">
                       <FileText size={14} aria-hidden="true" />
@@ -57,19 +55,19 @@ export function TaskList({
                     </span>
                   </td>
                   <td className="table__date">{formatDate(task.due_date)}</td>
-  <select
-    className={`pill pill--${task.status}`}
-    value={task.status}
-    onChange={(e) => onTaskChange(task.id, e.target.value as Status)}
-  >
-    {STATUS_ORDER.map((status) => (
-      <option key={status} value={status}>
-        {STATUS_LABEL[status]}
-      </option>
-    ))}
-  </select>
-</td>
-
+                  <td>
+                    <select
+                      className={`pill pill--${task.status}`}
+                      value={task.status}
+                      onChange={(e) => onTaskChange(task.id, e.target.value as Status)}
+                    >
+                      {STATUS_ORDER.map((status) => (
+                        <option key={status} value={status}>
+                          {STATUS_LABEL[status]}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                 </tr>
               ))}
             </tbody>
