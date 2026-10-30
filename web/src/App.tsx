@@ -13,6 +13,8 @@ import {
   type DeliveryTime,
   getDeliveryTime,
   formatDuration,
+  type Status,
+  patchStatus,
 } from "./api";
 import { Header } from "./components/Header";
 import { KpiCard } from "./components/KpiCard";
@@ -24,6 +26,7 @@ import { AiSummary, type AiState } from "./components/AiSummary";
 import { UpcomingDeadlines } from "./components/UpcomingDeadlines";
 import { CustomCursor } from "./components/CustomCursor";
 import "./App.css";
+import { TaskList } from "./components/TaskList";
 
 type DashboardData = {
   tasks: TaskRow[];
@@ -39,14 +42,22 @@ function App() {
   const [ai, setAi] = useState<AiState>({ kind: "idle" });
 
   useEffect(() => {
-    // As 4 rotas em paralelo: só mostra a tela quando todas responderem
-    Promise.all([getTasks(), getStatsByStatus(), getStatsByMember(), getOverdueTasks(), getDeliveryTime()])
+  loadData()
+  }, []);
+
+  function loadData(){
+      Promise.all([getTasks(), getStatsByStatus(), getStatsByMember(), getOverdueTasks(), getDeliveryTime()])
       .then(([tasks, byStatus, byMember, overdue, delivery]) => setData({ tasks, byStatus, byMember, overdue, delivery }))
       .catch((err) => {
         console.error(err);
         setError("Não foi possível carregar os dados. A API está rodando na porta 3000?");
       });
-  }, []);
+  }
+
+ async function handleStatusChange(id:number, status:Status){
+ await patchStatus(id, status)
+loadData()
+  }
 
   async function handleAnalyze() {
     setAi({ kind: "loading" });
@@ -89,13 +100,13 @@ function App() {
 
         {error && <p className="card status-message status-message--error">{error}</p>}
         {!error && !data && <p className="card status-message">Carregando dados do time...</p>}
-        {data && <Dashboard data={data} ai={ai} />}
+        {data && <Dashboard data={data} ai={ai} onStatusChange = {handleStatusChange} />}
       </main>
     </>
   );
 }
 
-function Dashboard({ data, ai }: { data: DashboardData; ai: AiState }) {
+function Dashboard({ data, ai, onStatusChange }: { data: DashboardData, ai: AiState, onStatusChange: (id:number, status:Status) => void }) {
   const { tasks, byStatus, byMember, overdue, delivery, } = data;
 
   const countOf = (status: StatusCount["status"]) =>
@@ -148,6 +159,9 @@ icon= {<Clock size={16}/>}
       <TeamPerformance members={byMember} tasks={tasks} />
       <OverdueTable tasks={overdue} today={today} />
       <AiSummary state={ai} />
+
+<TaskList tasks={tasks} onTaskChange={onStatusChange} />
+
     </>
   );
 }

@@ -24,7 +24,7 @@ const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${API_URL}${path}`);
   if (!res.ok) {
-    throw new Error(`PATCH ${path} falhou com status ${res.status}`);
+    throw new Error(`GET ${path} falhou com status ${res.status}`);
   }
   return res.json();
 }
@@ -36,7 +36,7 @@ const res = await fetch(`${API_URL}${path}`, {
   body: JSON.stringify(body)
 })
 if(!res.ok) {
-      throw new Error(`GET ${path} falhou com status ${res.status}`);
+      throw new Error(`PATCH ${path} falhou com status ${res.status}`);
 }
 return res.json()
 }
