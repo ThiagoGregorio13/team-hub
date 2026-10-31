@@ -214,6 +214,16 @@
   background: var(--olive-700);
 }
 
+/* Botão bloqueado (ex.: enquanto a tarefa está sendo criada) */
+.button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.button--primary:disabled:hover {
+  background: var(--olive);
+}
+
 .button--primary kbd {
   padding: 2px 6px;
   border-radius: 6px;

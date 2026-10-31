@@ -2,27 +2,26 @@ import { useEffect, useState, type FormEvent, useRef } from "react";
 import { ChevronDown, Plus, X } from "lucide-react";
 import { createTask, displayName, getMembers, type Member } from "../api";
 
- type NewTaskFormProps = {
+type NewTaskFormProps = {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
- }
+};
 
-
-export function NewTaskForm({open, onClose, onCreated}: NewTaskFormProps){
+export function NewTaskForm({ open, onClose, onCreated }: NewTaskFormProps) {
   const [title, setTitle] = useState("");
   const [member_id, setMember_Id] = useState("");
-  const [due_date, setDue_Date] = useState("")
-  const [members, setMembers] = useState<Member[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const [due_date, setDue_Date] = useState("");
+  const [members, setMembers] = useState<Member[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const ref = useRef<HTMLDialogElement>(null);
 
+  useEffect(() => {
+    getMembers().then(setMembers);
+  }, []);
 
   useEffect(() => {
-  getMembers().then(setMembers)
-}, [])
-
- useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
     if (open && !dialog.open) dialog.showModal();
@@ -30,15 +29,21 @@ export function NewTaskForm({open, onClose, onCreated}: NewTaskFormProps){
   }, [open]);
 
   async function handleSubmit(event: FormEvent) {
-event.preventDefault();
-setError(null);
-try {
-  await createTask(title, Number(member_id), due_date)
-  onCreated()
-}
-catch{
-  setError("Não foi possível criar a tarefa")
-}
+    event.preventDefault();
+    setError(null);
+    setSaving(true);
+    try {
+      await createTask(title, Number(member_id), due_date);
+      onCreated();
+      setTitle("");
+      setMember_Id("");
+      setDue_Date("");
+    } catch {
+      setError("Não foi possível criar a tarefa");
+    }
+    finally{
+      setSaving(false)
+    }
   }
   return (
     <dialog
@@ -49,7 +54,12 @@ catch{
       aria-labelledby="new-task-title"
     >
       <form className="drawer__body" onSubmit={handleSubmit}>
-        <button type="button" className="icon-button drawer__close" onClick={onClose} aria-label="Fechar">
+        <button
+          type="button"
+          className="icon-button drawer__close"
+          onClick={onClose}
+          aria-label="Fechar"
+        >
           <X size={18} />
         </button>
 
@@ -72,7 +82,11 @@ catch{
         <label className="field">
           <span className="field__label">Responsável</span>
           <span className="field__select">
-            <select className="field__control" value={member_id} onChange={(e) => setMember_Id(e.target.value)}>
+            <select
+              className="field__control"
+              value={member_id}
+              onChange={(e) => setMember_Id(e.target.value)}
+            >
               <option value="">Escolha um responsável</option>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -97,21 +111,19 @@ catch{
         {error && <p className="form-error">{error}</p>}
 
         <div className="form-actions">
-          <button type="button" className="button button--ghost" onClick={onClose}>
+          <button
+            type="button"
+            className="button button--ghost"
+            onClick={onClose}
+          >
             Cancelar
           </button>
-          <button type="submit" className="button button--primary">
+          <button type="submit" className="button button--primary" disabled ={saving}>
             <Plus size={16} aria-hidden="true" />
-            Criar tarefa
+{saving ? "Criando uma nova tarefa": "Criar tarefa"}
           </button>
         </div>
       </form>
-
-              </dialog>
-
-
-  )
-
-  
-
+    </dialog>
+  );
 }
