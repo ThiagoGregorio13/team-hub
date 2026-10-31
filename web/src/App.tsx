@@ -23,6 +23,7 @@ import { Timeline } from "./components/Timeline";
 import { TaskDrawer } from "./components/TaskDrawer";
 import { AskTeam } from "./components/AskTeam";
 import "./App.css";
+import { NewTaskForm } from "./components/NewTaskForm";
 
 type DashboardData = {
   tasks: TaskRow[];
@@ -40,6 +41,7 @@ function App() {
   const [filter, setFilter] = useState<TaskFilter>("all");
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
   const [ask, setAsk] = useState<AskMode>("closed");
+  const [newTaskOpen, setNewTaskOpen] = useState(false)
 
   useEffect(() => {
     loadData();
@@ -125,6 +127,7 @@ function App() {
                   onFilterChange={setFilter}
                   onStatusChange={handleStatusChange}
                   onOpenTask={setOpenTaskId}
+            onNewTask ={() => setNewTaskOpen(true)}
                 />
                 <div className="stack">
                   <Upcoming tasks={data.tasks} members={data.members} today={today} onOpenTask={setOpenTaskId} />
@@ -132,7 +135,13 @@ function App() {
                 </div>
               </div>
 
-              <Timeline tasks={data.tasks} members={data.members} today={today} onOpenTask={setOpenTaskId} />
+              <Timeline
+                tasks={data.tasks}
+                members={data.members}
+                today={today}
+                onOpenTask={setOpenTaskId}
+                onNewTask={() => setNewTaskOpen(true)}
+              />
             </>
           )}
         </main>
@@ -143,6 +152,12 @@ function App() {
         today={today}
         onClose={() => setOpenTaskId(null)}
         onStatusChange={handleStatusChange}
+      />
+
+      <NewTaskForm
+      open = {newTaskOpen}
+      onClose={() => setNewTaskOpen(false)}
+      onCreated={() => {setNewTaskOpen(false); loadData();}}
       />
       <AskTeam open={ask !== "closed"} startWithSummary={ask === "summary"} onClose={() => setAsk("closed")} />
     </div>

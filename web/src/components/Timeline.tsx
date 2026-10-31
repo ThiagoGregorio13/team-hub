@@ -9,6 +9,7 @@ import {
   type MemberCount,
   type TaskRow,
 } from "../api";
+import { Plus } from "lucide-react";
 import { Avatar } from "./Avatar";
 
 type TimelineProps = {
@@ -16,6 +17,7 @@ type TimelineProps = {
   members: MemberCount[];
   today: string;
   onOpenTask: (id: number) => void;
+  onNewTask: () => void;
 };
 
 // Folga antes da primeira e depois da última data, para nada ficar colado na borda
@@ -23,7 +25,7 @@ const PADDING_DAYS = 10;
 // Duas tarefas mais perto que isso (em % da largura) vão para linhas diferentes da faixa
 const MIN_GAP = 13;
 
-export function Timeline({ tasks, members, today, onOpenTask }: TimelineProps) {
+export function Timeline({ tasks, members, today, onOpenTask, onNewTask }: TimelineProps) {
   const todayDay = toDayNumber(today);
   const days = [todayDay, ...tasks.map((t) => toDayNumber(t.due_date))];
   const start = Math.min(...days) - PADDING_DAYS;
@@ -37,12 +39,18 @@ export function Timeline({ tasks, members, today, onOpenTask }: TimelineProps) {
           <h2 id="timeline-title">Cronograma</h2>
           <p className="card__subtitle">Cada tarefa na data de entrega, por pessoa</p>
         </div>
-        <ul className="legend" aria-label="Legenda">
-          <li><span className="legend__dot legend__dot--pending" />Pendente</li>
-          <li><span className="legend__dot legend__dot--in_progress" />Em andamento</li>
-          <li><span className="legend__dot legend__dot--done" />Concluída</li>
-          <li><span className="legend__dot legend__dot--late" />Atrasada</li>
-        </ul>
+        <div className="card__header-actions">
+          <ul className="legend" aria-label="Legenda">
+            <li><span className="legend__dot legend__dot--pending" />Pendente</li>
+            <li><span className="legend__dot legend__dot--in_progress" />Em andamento</li>
+            <li><span className="legend__dot legend__dot--done" />Concluída</li>
+            <li><span className="legend__dot legend__dot--late" />Atrasada</li>
+          </ul>
+          <button className="button button--outline button--sm" onClick={onNewTask}>
+            <Plus size={16} aria-hidden="true" />
+            Nova tarefa
+          </button>
+        </div>
       </header>
 
       {/* No celular a linha do tempo rola para o lado, em vez de espremer as datas */}
@@ -83,7 +91,13 @@ export function Timeline({ tasks, members, today, onOpenTask }: TimelineProps) {
                   </div>
 
                   <div className="lane__track">
-                    {own.length === 0 && <span className="lane__free">Livre — sem tarefas</span>}
+                    {/* Quem está livre ganha um atalho para receber uma tarefa */}
+                    {own.length === 0 && (
+                      <button className="lane__free" onClick={onNewTask}>
+                        <Plus size={14} aria-hidden="true" />
+                        Livre — adicionar tarefa
+                      </button>
+                    )}
                     {rows.map((row, rowIndex) =>
                       row.map((task) => {
                         const late = isOverdue(task, today);

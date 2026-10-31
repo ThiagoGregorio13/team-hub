@@ -1222,9 +1222,26 @@
   position: absolute;
   top: 50%;
   left: 12px;
-  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
   font-size: 12px;
+  font-weight: 600;
   color: var(--muted);
+  transform: translateY(-50%);
+  transition:
+    border-color 0.2s,
+    color 0.2s;
+}
+
+.lane__free:hover {
+  border-color: var(--olive);
+  border-style: solid;
+  color: var(--olive);
 }
 
 .tl-task {
@@ -1471,6 +1488,123 @@
   border-color: var(--olive);
   background: var(--olive);
   color: var(--cream);
+}
+
+/* ---------- Formulário de nova tarefa ---------- */
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.field__control {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 14px;
+  color: var(--ink);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.field__control::placeholder {
+  color: var(--muted);
+}
+
+.field__control:hover {
+  border-color: var(--border-strong);
+}
+
+/* Foco: borda verde + um halo suave, no lugar do contorno padrão do navegador */
+.field__control:focus {
+  border-color: var(--olive);
+  box-shadow: 0 0 0 4px var(--olive-50);
+  outline: none;
+}
+
+.field__select {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.field__select select {
+  appearance: none;
+  padding-right: 40px;
+  cursor: pointer;
+}
+
+.field__select svg {
+  position: absolute;
+  right: 14px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.form-error {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--wine-50);
+  color: var(--wine);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.form-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.form-actions .button {
+  justify-content: center;
+  margin-top: 16px;
+}
+
+/* ---------- Variações de botão ---------- */
+.button--sm {
+  min-height: 38px;
+  padding: 0 14px;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.button--ghost {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.button--ghost:hover {
+  background: var(--border);
+}
+
+.button--outline {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.button--outline:hover {
+  border-color: var(--olive);
+  color: var(--olive);
+}
+
+.card__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
 /* ---------- Assistente (Ctrl+K) ---------- */
