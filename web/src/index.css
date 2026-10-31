@@ -1,31 +1,34 @@
 :root {
-  /* Paleta do Figma */
-  --olive: #4b5320;
-  --olive-700: #3c4219;
-  --olive-50: #eef0e2;
-  --sunflower: #ffbe00;
-  --sunflower-50: #fff6d9;
-  --cream: #f4f6de;
-  --wine: #5c083e;
-  --wine-50: #f7e8f0;
-  --pending: #b9bca4;
-  --pending-50: #f1f2ea;
+  /* Paleta: deep burgundy + muted sage grey + warm cream beige.
+     Os nomes dizem o PAPEL da cor (não a cor), então trocar a paleta é só mudar os valores aqui. */
+  --primary: #6b2737; /* deep burgundy: botões, item ativo, concluídas */
+  --primary-700: #521c29;
+  --primary-50: #f5e9eb;
+  --sage: #8e9b8a; /* muted sage grey: em andamento, destaques secundários */
+  --sage-700: #56634f;
+  --sage-50: #e1e8dd;
+  --sage-light: #c5cbc1; /* pendentes */
+  --alert: #b5533c; /* terracota: atrasadas (precisa se destacar do burgundy) */
+  --alert-50: #f8ebe5;
+  --cream: #f7f0e6; /* texto/ícone em cima do burgundy */
+  --neutral-50: #f1ede6;
 
-  /* Neutros do layout (fundo levemente creme, cards brancos) */
-  --bg: #f6f7ef;
-  --surface: #ffffff;
-  --ink: #1b1d12;
-  --text: #3d4030;
-  --muted: #7a7e68;
-  --border: #e6e8dc;
-  --border-strong: #d6d9c8;
+  /* Neutros do layout (fundo cream beige, cards marfim) */
+  --bg: #f3ede3;
+  --surface: #fffdf9;
+  --surface-soft: #faf6f0;
+  --ink: #2a2023;
+  --text: #4a3f41;
+  --muted: #8a7f7b;
+  --border: #e8dfd3;
+  --border-strong: #d8ccbd;
 
   --radius-lg: 20px;
   --radius: 14px;
   --radius-sm: 10px;
-  --shadow-sm: 0 1px 2px rgba(27, 29, 18, 0.05);
-  --shadow: 0 1px 2px rgba(27, 29, 18, 0.04), 0 4px 12px rgba(27, 29, 18, 0.04);
-  --shadow-lg: 0 12px 32px -8px rgba(27, 29, 18, 0.18);
+  --shadow-sm: 0 1px 2px rgba(42, 32, 35, 0.05);
+  --shadow: 0 1px 2px rgba(42, 32, 35, 0.04), 0 4px 12px rgba(42, 32, 35, 0.04);
+  --shadow-lg: 0 12px 32px -8px rgba(42, 32, 35, 0.18);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   --font: "Plus Jakarta Sans", system-ui, sans-serif;
@@ -69,11 +72,11 @@ button {
 }
 
 :focus-visible {
-  outline: 2px solid var(--olive);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
 ::selection {
-  background: var(--sunflower);
+  background: var(--primary-50);
   color: var(--ink);
 }

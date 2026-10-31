@@ -17,14 +17,14 @@ export function StatCards({ tasks, members, today }: StatCardsProps) {
   return (
     <section className="stats" aria-label="Indicadores">
       <StatCard
-        tone="olive"
+        tone="primary"
         icon={<Layers size={20} />}
         label="Total de tarefas"
         value={total}
         foot={`Distribuídas entre ${plural(members.length, "membro")}`}
       />
       <StatCard
-        tone="sunflower"
+        tone="sage"
         icon={<Timer size={20} />}
         label="Em andamento"
         value={inProgress}
@@ -32,7 +32,7 @@ export function StatCards({ tasks, members, today }: StatCardsProps) {
         foot={`${percent(inProgress, total)}% do total`}
       />
       <StatCard
-        tone="olive"
+        tone="primary"
         icon={<CheckCircle2 size={20} />}
         label="Concluídas"
         value={done}
@@ -40,25 +40,25 @@ export function StatCards({ tasks, members, today }: StatCardsProps) {
         foot={`${percent(done, total)}% do total`}
       />
       <StatCard
-        tone="wine"
+        tone="alert"
         icon={<AlertTriangle size={20} />}
         label="Atrasadas"
         value={late}
         foot={late === 0 ? "Tudo dentro do prazo" : "Precisam de atenção"}
-        badge={late === 0 ? { text: "Em dia", tone: "olive" } : { text: "Atenção", tone: "wine" }}
+        badge={late === 0 ? { text: "Em dia", tone: "primary" } : { text: "Atenção", tone: "alert" }}
       />
     </section>
   );
 }
 
 type StatCardProps = {
-  tone: "olive" | "sunflower" | "wine";
+  tone: "primary" | "sage" | "alert";
   icon: ReactNode;
   label: string;
   value: number;
   foot: string;
   progress?: number;
-  badge?: { text: string; tone: "olive" | "wine" };
+  badge?: { text: string; tone: "primary" | "alert" };
 };
 
 function StatCard({ tone, icon, label, value, foot, progress, badge }: StatCardProps) {
