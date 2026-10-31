@@ -23,6 +23,7 @@ import { Timeline } from "./components/Timeline";
 import { TaskDrawer } from "./components/TaskDrawer";
 import { AskTeam } from "./components/AskTeam";
 import "./App.css";
+import { NewTaskForm } from "./components/NewTaskForm";
 
 type DashboardData = {
   tasks: TaskRow[];
@@ -40,6 +41,7 @@ function App() {
   const [filter, setFilter] = useState<TaskFilter>("all");
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
   const [ask, setAsk] = useState<AskMode>("closed");
+  const [newTaskOpen, setNewTaskOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -59,17 +61,25 @@ function App() {
 
   function loadData() {
     Promise.all([getTasks(), getStatsByMember(), getDeliveryTime()])
-      .then(([tasks, members, delivery]) => setData({ tasks, members, delivery }))
+      .then(([tasks, members, delivery]) =>
+        setData({ tasks, members, delivery }),
+      )
       .catch((err) => {
         console.error(err);
-        setError("Não foi possível carregar os dados. A API está rodando na porta 3000?");
+        setError(
+          "Não foi possível carregar os dados. A API está rodando na porta 3000?",
+        );
       });
   }
 
   async function handleStatusChange(id: number, status: Status) {
     // Otimista: a tela muda na hora e o PATCH confirma depois
-    setData((current) =>
-      current && { ...current, tasks: current.tasks.map((t) => (t.id === id ? { ...t, status } : t)) },
+    setData(
+      (current) =>
+        current && {
+          ...current,
+          tasks: current.tasks.map((t) => (t.id === id ? { ...t, status } : t)),
+        },
     );
     try {
       await patchStatus(id, status);
@@ -83,7 +93,9 @@ function App() {
   // O sino do header leva direto para a aba "Atrasadas" da tabela
   function showLate() {
     setFilter("late");
-    document.getElementById("tasks")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document
+      .getElementById("tasks")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   const today = todayLocal();
@@ -108,7 +120,11 @@ function App() {
           {!error && !data && <Skeleton />}
           {data && (
             <>
-              <StatCards tasks={data.tasks} members={data.members} today={today} />
+              <StatCards
+                tasks={data.tasks}
+                members={data.members}
+                today={today}
+              />
 
               <div className="grid grid--wide-left">
                 <WorkloadChart members={data.members} tasks={data.tasks} />
@@ -125,14 +141,26 @@ function App() {
                   onFilterChange={setFilter}
                   onStatusChange={handleStatusChange}
                   onOpenTask={setOpenTaskId}
+                  onNewTask={() => setNewTaskOpen(true)}
                 />
                 <div className="stack">
-                  <Upcoming tasks={data.tasks} members={data.members} today={today} onOpenTask={setOpenTaskId} />
+                  <Upcoming
+                    tasks={data.tasks}
+                    members={data.members}
+                    today={today}
+                    onOpenTask={setOpenTaskId}
+                  />
                   <AiCard onAsk={() => setAsk("summary")} />
                 </div>
               </div>
 
-              <Timeline tasks={data.tasks} members={data.members} today={today} onOpenTask={setOpenTaskId} />
+              <Timeline
+                tasks={data.tasks}
+                members={data.members}
+                today={today}
+                onOpenTask={setOpenTaskId}
+                onNewTask={() => setNewTaskOpen(true)}
+              />
             </>
           )}
         </main>
@@ -144,7 +172,20 @@ function App() {
         onClose={() => setOpenTaskId(null)}
         onStatusChange={handleStatusChange}
       />
-      <AskTeam open={ask !== "closed"} startWithSummary={ask === "summary"} onClose={() => setAsk("closed")} />
+
+      <NewTaskForm
+        open={newTaskOpen}
+        onClose={() => setNewTaskOpen(false)}
+        onCreated={() => {
+          setNewTaskOpen(false);
+          loadData();
+        }}
+      />
+      <AskTeam
+        open={ask !== "closed"}
+        startWithSummary={ask === "summary"}
+        onClose={() => setAsk("closed")}
+      />
     </div>
   );
 }
@@ -152,7 +193,11 @@ function App() {
 // Enquanto carrega: blocos cinza no formato dos cards
 function Skeleton() {
   return (
-    <div className="skeleton" role="status" aria-label="Carregando dados do time">
+    <div
+      className="skeleton"
+      role="status"
+      aria-label="Carregando dados do time"
+    >
       <div className="skeleton__row">
         <span />
         <span />

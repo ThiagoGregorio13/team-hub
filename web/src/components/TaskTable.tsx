@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 import {
   STATUS_LABEL,
   STATUS_ORDER,
@@ -23,6 +23,7 @@ type TaskTableProps = {
   onFilterChange: (filter: TaskFilter) => void;
   onStatusChange: (id: number, status: Status) => void;
   onOpenTask: (id: number) => void;
+  onNewTask: () => void;
 };
 
 const TABS: { key: TaskFilter; label: string }[] = [
@@ -48,6 +49,7 @@ export function TaskTable({
   onFilterChange,
   onStatusChange,
   onOpenTask,
+  onNewTask,
 }: TaskTableProps) {
   const search = query.trim().toLowerCase();
   const visible = tasks
@@ -62,6 +64,10 @@ export function TaskTable({
           <h2 id="tasks-title">Tarefas</h2>
           <p className="card__subtitle">Clique numa linha para ver detalhes ou troque o status direto</p>
         </div>
+        <button className="button button--primary button--sm" onClick={onNewTask}>
+          <Plus size={16} aria-hidden="true" />
+          Nova tarefa
+        </button>
       </header>
 
       <div className="tabs" role="tablist" aria-label="Filtrar tarefas">
