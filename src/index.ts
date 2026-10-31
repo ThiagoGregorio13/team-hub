@@ -294,7 +294,7 @@ if(webhookurl) {
     await fetch(webhookurl, {
       method: "POST",
       headers: {"Content-type": "application/json"},
-      body: JSON.stringify({title: rows[0].title, member: rows[0].name, due_date: body.due_date})
+      body: JSON.stringify({title: rows[0].title, member: rows_select[0].name, due_date: body.due_date})
     })
   }
   catch(err) {
