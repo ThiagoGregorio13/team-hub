@@ -103,6 +103,8 @@ In up to 5 lines, tell me:
 - which tasks are OVERDUE (due_date before today and status other than done) and who owns them
 - who has the heaviest workload
 - one practical suggestion for the manager
+Answer in Brazilian Portuguese.
+
 `;
 
   try {
@@ -257,6 +259,7 @@ app.patch("/tasks/:id", async (c) => {
 });
 
 app.post("/tasks", async (c) => {
+
   const body = await c.req.json();
   if (!body.title) {
     return c.json({ error: "title is required" }, 400);
@@ -269,7 +272,7 @@ app.post("/tasks", async (c) => {
   }
 
   const rows_select = await sql`
-  SELECT id FROM members
+  SELECT id, name FROM members
 WHERE id = ${body.member_id}`;
 
   if (rows_select.length === 0) {
@@ -282,7 +285,23 @@ WHERE id = ${body.member_id}`;
  'pending',
     ${body.member_id},
     ${body.due_date}
-)  RETURNING  id, title, status, member_id`;
+)  RETURNING  id, title, status, member_id, due_date`;
+
+const webhookurl = process.env.N8N_WEBHOOK_URL
+
+if(webhookurl) {
+  try{
+    await fetch(webhookurl, {
+      method: "POST",
+      headers: {"Content-type": "application/json"},
+      body: JSON.stringify({title: rows[0].title, member: rows_select[0].name, due_date: body.due_date})
+    })
+  }
+  catch(err) {
+console.error("failed to notify webhook", err)
+  }
+}
+
   return c.json(rows[0], 201);
 });
 
