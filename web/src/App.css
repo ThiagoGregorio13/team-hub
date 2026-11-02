@@ -1582,6 +1582,137 @@
   margin-top: 16px;
 }
 
+/* ---------- Excluir tarefa ---------- */
+.table__actions {
+  width: 1%;
+  padding-left: 0 !important;
+}
+
+/* Discreta: só aparece forte quando passa o mouse na linha ou no botão */
+.trash-button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: var(--muted);
+  opacity: 0.45;
+  transition:
+    opacity 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+
+.table tbody tr:hover .trash-button,
+.trash-button:focus-visible {
+  opacity: 1;
+}
+
+.trash-button:hover {
+  background: var(--alert-50);
+  color: var(--alert);
+}
+
+.button--danger {
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--alert);
+}
+
+.button--danger:hover {
+  border-color: var(--alert);
+  background: var(--alert-50);
+}
+
+/* Lixeira "armada" depois do 1º clique */
+.trash-button.is-confirming {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  padding: 0 10px;
+  opacity: 1;
+  background: var(--alert-50);
+  color: var(--alert);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.button--danger.is-confirming {
+  border-color: var(--alert);
+  background: var(--alert);
+  color: var(--surface);
+}
+
+/* ---------- Caixa de confirmação ---------- */
+/* min(): nunca passa de 400px, e no celular sobra 16px de cada lado */
+.confirm {
+  width: min(400px, calc(100% - 32px));
+  margin: auto;
+  padding: 28px 24px 24px;
+  border: none;
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 24px 60px -20px rgba(42, 32, 35, 0.4);
+}
+
+.confirm[open] {
+  animation: pop-in 0.25s var(--ease);
+}
+
+.confirm::backdrop {
+  background: rgba(42, 32, 35, 0.35);
+  backdrop-filter: blur(3px);
+}
+
+@keyframes pop-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+}
+
+.confirm__message {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+/* Aqui o "Prosseguir" é a ação principal, então fica cheio em vez de só contorno */
+.confirm .button--danger {
+  border-color: var(--alert);
+  background: var(--alert);
+  color: var(--surface);
+}
+
+.confirm .button--danger:hover {
+  filter: brightness(0.92);
+}
+
+/* Celular: botões empilhados e largos, com o "Prosseguir" em cima (mais perto do polegar) */
+@media (max-width: 480px) {
+  .confirm__actions {
+    flex-direction: column-reverse;
+  }
+
+  .confirm__actions .button {
+    justify-content: center;
+    width: 100%;
+  }
+}
+
 /* ---------- Variações de botão ---------- */
 .button--sm {
   min-height: 38px;

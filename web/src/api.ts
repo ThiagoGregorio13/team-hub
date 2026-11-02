@@ -46,6 +46,14 @@ if(!res.ok) {
 return res.json()
 }
 
+// Sem <T> e sem res.json(): o DELETE responde 204, que não tem corpo para ler
+async function del(path: string): Promise<void> {
+  const res = await fetch(`${API_URL}${path}`, { method: "DELETE" });
+  if (!res.ok) {
+    throw new Error(`DELETE ${path} falhou com status ${res.status}`);
+  }
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     method: "POST",
@@ -67,6 +75,7 @@ export const getAiSummary = () => get<AiSummary>("/ai/summary");
 export const getOverdueTasks = () => get<TaskRow[]>("/tasks/overdue");
 export const getDeliveryTime = () => get<DeliveryTime>("/stats/delivery-time")
 export const patchStatus = (id:number, status:Status) => patch<{ id: number; status: Status }>(`/tasks/${id}`, {status})
+export const deleteTask = (id: number) => del(`/tasks/${id}`);
 export const askTeam = (question: string) => post<ChatAnswer>("/ai/chat", { question });
 export const getMembers = () => get<Member[]>("/members")
 export const createTask = (title:string, member_id: number, due_date: string) => post<{id: number}>("/tasks", {title, member_id, due_date})

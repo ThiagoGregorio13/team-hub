@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { CalendarDays, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CalendarDays, Trash2, X } from "lucide-react";
 import {
   STATUS_LABEL,
   STATUS_ORDER,
@@ -16,17 +16,20 @@ type TaskDrawerProps = {
   today: string;
   onClose: () => void;
   onStatusChange: (id: number, status: Status) => void;
+  onDelete: (id: number) => void;
 };
 
 // <dialog> nativo: showModal() já cuida do fundo escuro, da tecla Esc e de prender o foco aqui dentro
-export function TaskDrawer({ task, today, onClose, onStatusChange }: TaskDrawerProps) {
+export function TaskDrawer({ task, today, onClose, onStatusChange, onDelete }: TaskDrawerProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
     if (task && !dialog.open) dialog.showModal();
     if (!task && dialog.open) dialog.close();
+    setConfirming(false);
   }, [task]);
 
   return (
@@ -83,6 +86,16 @@ export function TaskDrawer({ task, today, onClose, onStatusChange }: TaskDrawerP
               </label>
             ))}
           </fieldset>
+
+          {/* Dois cliques, igual à lixeira da tabela */}
+          <button
+            className={`button button--danger${confirming ? " is-confirming" : ""}`}
+            onClick={() => (confirming ? onDelete(task.id) : setConfirming(true))}
+            onBlur={() => setConfirming(false)}
+          >
+            <Trash2 size={16} aria-hidden="true" />
+            {confirming ? "Clique de novo para excluir" : "Excluir tarefa"}
+          </button>
         </div>
       )}
     </dialog>
