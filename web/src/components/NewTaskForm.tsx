@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, useRef } from "react";
 import { ChevronDown, Plus, X } from "lucide-react";
-import { createTask, displayName, getMembers, type Member } from "../api";
+import { createTask, displayName, getMembers, todayLocal, type Member } from "../api";
+import { WheelDatePicker } from "./WheelDatePicker";
 
 type NewTaskFormProps = {
   open: boolean;
@@ -11,7 +12,8 @@ type NewTaskFormProps = {
 export function NewTaskForm({ open, onClose, onCreated }: NewTaskFormProps) {
   const [title, setTitle] = useState("");
   const [member_id, setMember_Id] = useState("");
-  const [due_date, setDue_Date] = useState("");
+  // A roleta sempre mostra uma data, então começa em hoje em vez de vazio
+  const [due_date, setDue_Date] = useState(todayLocal());
   const [members, setMembers] = useState<Member[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -37,7 +39,7 @@ export function NewTaskForm({ open, onClose, onCreated }: NewTaskFormProps) {
       onCreated();
       setTitle("");
       setMember_Id("");
-      setDue_Date("");
+      setDue_Date(todayLocal());
     } catch {
       setError("Não foi possível criar a tarefa");
     }
@@ -98,15 +100,12 @@ export function NewTaskForm({ open, onClose, onCreated }: NewTaskFormProps) {
           </span>
         </label>
 
-        <label className="field">
-          <span className="field__label">Prazo</span>
-          <input
-            className="field__control"
-            type="date"
-            value={due_date}
-            onChange={(e) => setDue_Date(e.target.value)}
-          />
-        </label>
+        {/* <div> e não <label>: a roleta tem três colunas, não um campo só */}
+        <div className="field" role="group" aria-labelledby="due-date-label">
+          <span id="due-date-label" className="field__label">Prazo</span>
+          {/* Só monta com a gaveta aberta, para cada coluna rolar até a data certa ao abrir */}
+          {open && <WheelDatePicker value={due_date} onChange={setDue_Date} />}
+        </div>
 
         {error && <p className="form-error">{error}</p>}
 

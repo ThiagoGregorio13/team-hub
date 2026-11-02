@@ -1560,6 +1560,129 @@
   pointer-events: none;
 }
 
+/* ---------- Roleta de data (WheelDatePicker) ---------- */
+.wheel-picker {
+  display: grid;
+  gap: 8px;
+}
+
+/* A data fechada: mesmo visual do .field__control */
+.wheel-picker__display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 46px;
+  padding: 0 8px 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 14px;
+  color: var(--muted);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.wheel-picker__display:hover {
+  border-color: var(--border-strong);
+}
+
+.wheel-picker:focus-within .wheel-picker__display {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-50);
+}
+
+.wheel-picker__display svg {
+  margin-right: 6px;
+}
+
+/* Cada pedaço da data (dia, mês, ano) é um botão que abre a sua roleta */
+.wheel-picker__part {
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.wheel-picker__part:hover {
+  background: var(--neutral-50);
+}
+
+.wheel-picker__part.is-open {
+  background: var(--primary-50);
+  color: var(--primary);
+}
+
+/* 5 itens de 36px visíveis; o do meio (72px do topo) é o escolhido */
+.wheel {
+  position: relative;
+  height: 180px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+  animation: wheel-open 0.2s var(--ease);
+}
+
+@keyframes wheel-open {
+  from {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+}
+
+/* A faixa do meio que marca a data escolhida */
+.wheel::before {
+  content: "";
+  position: absolute;
+  top: 72px;
+  right: 8px;
+  left: 8px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--primary-50);
+  pointer-events: none;
+}
+
+.wheel__column {
+  position: relative;
+  height: 100%;
+  padding: 72px 0; /* folga para o primeiro e o último item conseguirem chegar no meio */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-snap-type: y mandatory; /* "encaixa" o item mais perto do meio ao soltar */
+  scrollbar-width: none;
+  /* Some aos poucos em cima e embaixo, como uma roda girando */
+  mask-image: linear-gradient(transparent, #000 35%, #000 65%, transparent);
+  outline: none;
+}
+
+.wheel__column::-webkit-scrollbar {
+  display: none;
+}
+
+.wheel__item {
+  display: grid;
+  place-items: center;
+  height: 36px;
+  scroll-snap-align: center;
+  font-size: 15px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+
+.wheel__item.is-selected {
+  font-weight: 700;
+  color: var(--primary);
+}
+
 .form-error {
   padding: 12px 14px;
   border-radius: 12px;

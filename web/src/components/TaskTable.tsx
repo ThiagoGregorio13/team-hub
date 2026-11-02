@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import {
   STATUS_LABEL,
@@ -51,25 +50,37 @@ export function TaskTable({
   onFilterChange,
   onStatusChange,
   onOpenTask,
-  onNewTask,
   onDeleteTask,
+  onNewTask,
 }: TaskTableProps) {
-  // Lixeira em dois cliques: o 1º arma (vira "Excluir?"), o 2º apaga
-  const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const search = query.trim().toLowerCase();
   const visible = tasks
     .filter((t) => matches(t, filter, today))
-    .filter((t) => !search || t.title.toLowerCase().includes(search) || t.member_name.toLowerCase().includes(search))
+    .filter(
+      (t) =>
+        !search ||
+        t.title.toLowerCase().includes(search) ||
+        t.member_name.toLowerCase().includes(search),
+    )
     .sort((a, b) => a.due_date.localeCompare(b.due_date));
 
   return (
-    <section className="card table-card" id="tasks" aria-labelledby="tasks-title">
+    <section
+      className="card table-card"
+      id="tasks"
+      aria-labelledby="tasks-title"
+    >
       <header className="card__header">
         <div>
           <h2 id="tasks-title">Tarefas</h2>
-          <p className="card__subtitle">Clique numa linha para ver detalhes ou troque o status direto</p>
+          <p className="card__subtitle">
+            Clique numa linha para ver detalhes ou troque o status direto
+          </p>
         </div>
-        <button className="button button--primary button--sm" onClick={onNewTask}>
+        <button
+          className="button button--primary button--sm"
+          onClick={onNewTask}
+        >
           <Plus size={16} aria-hidden="true" />
           Nova tarefa
         </button>
@@ -126,21 +137,36 @@ export function TaskTable({
                   </td>
                   <td>
                     <span className="table__person">
-                      <Avatar name={task.member_name} members={members} size="sm" />
+                      <Avatar
+                        name={task.member_name}
+                        members={members}
+                        size="sm"
+                      />
                       {displayName(task.member_name)}
                     </span>
                   </td>
                   <td>
                     <span className="table__due">
                       {formatDate(task.due_date)}
-                      <span className={`table__relative${late ? " is-late" : ""}`}>{describeDue(task, today)}</span>
+                      <span
+                        className={`table__relative${late ? " is-late" : ""}`}
+                      >
+                        {describeDue(task, today)}
+                      </span>
                     </span>
                   </td>
                   {/* stopPropagation: mexer no select não deve abrir a gaveta da linha */}
                   <td onClick={(e) => e.stopPropagation()}>
-                    <label className={`status-select status-select--${task.status}`}>
+                    <label
+                      className={`status-select status-select--${task.status}`}
+                    >
                       <span className="sr-only">Status de {task.title}</span>
-                      <select value={task.status} onChange={(e) => onStatusChange(task.id, e.target.value as Status)}>
+                      <select
+                        value={task.status}
+                        onChange={(e) =>
+                          onStatusChange(task.id, e.target.value as Status)
+                        }
+                      >
                         {STATUS_ORDER.map((s) => (
                           <option key={s} value={s}>
                             {STATUS_LABEL[s]}
@@ -150,24 +176,16 @@ export function TaskTable({
                       <ChevronDown size={14} aria-hidden="true" />
                     </label>
                   </td>
-                  <td className="table__actions" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      className={`trash-button${confirmingId === task.id ? " is-confirming" : ""}`}
-                      onClick={() => {
-                        if (confirmingId === task.id) {
-                          setConfirmingId(null);
-                          onDeleteTask(task.id);
-                        } else {
-                          setConfirmingId(task.id);
-                        }
-                      }}
-                      // Clicou em outro lugar: desarma
-                      onBlur={() => setConfirmingId(null)}
-                      aria-label={confirmingId === task.id ? `Confirmar exclusão de ${task.title}` : `Excluir ${task.title}`}
-                      title="Excluir tarefa"
-                    >
+                  <td
+                    className="table__actions"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button 
+                    className = "trash-button"
+                    aria-label={`Excluir ${task.title}`}
+                    onClick ={() => onDeleteTask(task.id)}
+                    title="Excluir tarefa">
                       <Trash2 size={16} />
-                      {confirmingId === task.id && "Excluir?"}
                     </button>
                   </td>
                 </tr>
