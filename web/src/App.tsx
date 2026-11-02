@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  deleteTask,
   getDeliveryTime,
   getStatsByMember,
   getTasks,
@@ -24,6 +25,7 @@ import { TaskDrawer } from "./components/TaskDrawer";
 import { AskTeam } from "./components/AskTeam";
 import "./App.css";
 import { NewTaskForm } from "./components/NewTaskForm";
+import {DialogCancel } from "./components/ConfirmDialog"
 
 type DashboardData = {
   tasks: TaskRow[];
@@ -40,6 +42,7 @@ function App() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<TaskFilter>("all");
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<number | null>(null);
   const [ask, setAsk] = useState<AskMode>("closed");
   const [newTaskOpen, setNewTaskOpen] = useState(false);
 
@@ -90,6 +93,26 @@ function App() {
     loadData();
   }
 
+
+   function handleDeleteTask(id: number) {
+setTaskToDelete(id);
+  }
+
+  async function confirmDelete() {
+    if(taskToDelete === null) return
+    setOpenTaskId(null);
+    setTaskToDelete(null);
+    setData((current) => current && { ...current, tasks: current.tasks.filter((t) => t.id !== taskToDelete)});
+
+     try {
+      await deleteTask(taskToDelete);
+    } catch (err) {
+      console.error(err);
+    }
+    // Recarrega de qualquer jeito: se o PATCH falhou, a tela volta ao que está no banco
+    loadData();
+   }
+
   // O sino do header leva direto para a aba "Atrasadas" da tabela
   function showLate() {
     setFilter("late");
@@ -97,9 +120,10 @@ function App() {
       .getElementById("tasks")
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
-
   const today = todayLocal();
   const openTask = data?.tasks.find((t) => t.id === openTaskId) ?? null;
+    const deletingTask  = data?.tasks.find((t) => t.id === taskToDelete) ?? null;
+
   const lateCount = data?.tasks.filter((t) => isOverdue(t, today)).length ?? 0;
 
   return (
@@ -142,6 +166,7 @@ function App() {
                   onStatusChange={handleStatusChange}
                   onOpenTask={setOpenTaskId}
                   onNewTask={() => setNewTaskOpen(true)}
+                  onDeleteTask={handleDeleteTask}
                 />
                 <div className="stack">
                   <Upcoming
@@ -171,7 +196,15 @@ function App() {
         today={today}
         onClose={() => setOpenTaskId(null)}
         onStatusChange={handleStatusChange}
+        onDelete={handleDeleteTask}
       />
+
+   <DialogCancel
+       open ={taskToDelete  !== null}
+        message = {`Deseja realmente excluir a tarefa "${deletingTask?.title}"?`}
+        onConfirm = {() => confirmDelete()}
+        onCancel = {() => setTaskToDelete(null)}
+        />
 
       <NewTaskForm
         open={newTaskOpen}

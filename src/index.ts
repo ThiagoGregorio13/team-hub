@@ -258,6 +258,19 @@ app.patch("/tasks/:id", async (c) => {
   return c.json(rows[0]);
 });
 
+app.delete("/tasks/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+
+  // RETURNING id: se não voltar nenhuma linha, é porque a tarefa não existia
+  const rows = await sql`DELETE FROM tasks WHERE id = ${id} RETURNING id`;
+  if (rows.length === 0) {
+    return c.json({ error: "task not found" }, 404);
+  }
+
+  // 204 No Content: apagou e não tem nada para devolver no corpo
+  return c.body(null, 204);
+});
+
 app.post("/tasks", async (c) => {
 
   const body = await c.req.json();

@@ -1,4 +1,5 @@
-import { ChevronDown, Plus } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import {
   STATUS_LABEL,
   STATUS_ORDER,
@@ -24,6 +25,7 @@ type TaskTableProps = {
   onStatusChange: (id: number, status: Status) => void;
   onOpenTask: (id: number) => void;
   onNewTask: () => void;
+  onDeleteTask: (id: number) => void;
 };
 
 const TABS: { key: TaskFilter; label: string }[] = [
@@ -50,7 +52,10 @@ export function TaskTable({
   onStatusChange,
   onOpenTask,
   onNewTask,
+  onDeleteTask,
 }: TaskTableProps) {
+  // Lixeira em dois cliques: o 1º arma (vira "Excluir?"), o 2º apaga
+  const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const search = query.trim().toLowerCase();
   const visible = tasks
     .filter((t) => matches(t, filter, today))
@@ -96,12 +101,15 @@ export function TaskTable({
               <th>Responsável</th>
               <th>Prazo</th>
               <th>Status</th>
+              <th>
+                <span className="sr-only">Ações</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 && (
               <tr>
-                <td colSpan={4} className="table__empty">
+                <td colSpan={5} className="table__empty">
                   Nenhuma tarefa encontrada{search ? ` para "${query}"` : ""}.
                 </td>
               </tr>
@@ -141,6 +149,26 @@ export function TaskTable({
                       </select>
                       <ChevronDown size={14} aria-hidden="true" />
                     </label>
+                  </td>
+                  <td className="table__actions" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      className={`trash-button${confirmingId === task.id ? " is-confirming" : ""}`}
+                      onClick={() => {
+                        if (confirmingId === task.id) {
+                          setConfirmingId(null);
+                          onDeleteTask(task.id);
+                        } else {
+                          setConfirmingId(task.id);
+                        }
+                      }}
+                      // Clicou em outro lugar: desarma
+                      onBlur={() => setConfirmingId(null)}
+                      aria-label={confirmingId === task.id ? `Confirmar exclusão de ${task.title}` : `Excluir ${task.title}`}
+                      title="Excluir tarefa"
+                    >
+                      <Trash2 size={16} />
+                      {confirmingId === task.id && "Excluir?"}
+                    </button>
                   </td>
                 </tr>
               );
