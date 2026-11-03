@@ -60,6 +60,24 @@ async function getOverdueTasks(): Promise<TaskRow[]> {
   return rows;
 }
 
+async function searchNotes(query: string){
+  const response = await ai.models.embedContent({
+    model: "gemini-embedding-001",
+    contents: query,
+    config: { outputDimensionality: 768 },
+  });
+  const questionVector = JSON.stringify(response.embeddings![0].values!);
+  
+  const rows = await sql`
+    SELECT content, 1 - (embedding <=> ${questionVector}::vector) AS score
+    FROM notes
+    ORDER BY embedding <=> ${questionVector}::vector
+    LIMIT 3
+  `;
+
+  return rows;
+}
+
 async function getStatsByStatus(): Promise<StatusCount[]> {
   const rows: StatusCount[] = await sql`
    SELECT status, COUNT(tasks.member_id):: int AS total FROM tasks GROUP BY status;
@@ -147,7 +165,26 @@ const getTasksByMemberDeclaration: FunctionDeclaration = {
   },
 };
 
-const TOOLS = [getTasksByMemberDeclaration, getOverdueTasksDeclaration];
+const searchNotesDeclaration: FunctionDeclaration = {
+  name: "search_notes",
+  description:
+    "Searches for notes based on the provided query. " +
+    "Returns the most relevant notes along with their similarity scores." +
+    "Use this for any question about team processes, procedures, or internal knowledge.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      query: {
+        type: Type.STRING,
+        description:
+          "The search query to find relevant notes.",
+      },
+    },
+    required: ["query"],
+  },
+};
+
+const TOOLS = [getTasksByMemberDeclaration, getOverdueTasksDeclaration, searchNotesDeclaration];
 
 async function runTool(name: string, args: Record<string, unknown>) {
   if (name === "get_tasks_by_member") {
@@ -156,6 +193,10 @@ async function runTool(name: string, args: Record<string, unknown>) {
   }
   if (name === "get_overdue_tasks") {
     return await getOverdueTasks();
+  }
+  if (name === "search_notes") {
+    const query = args.query as string;
+    return await searchNotes(query);
   }
   return { error: `Unknown command: ${name}` };
 }
@@ -324,5 +365,7 @@ app.get("/members", async (c) => {
   `;
   return c.json(rows);
 });
+
+
 
 export default app;
