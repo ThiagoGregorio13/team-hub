@@ -25,6 +25,6 @@ const notesWithVectors  = notes.map((content, i) => ({
 
 
 for(const r of notesWithVectors ){
-  await sql`INSERT INTO notes (content, embedding) VALUES (${r.content}, ${JSON.stringify(r.embedding)})`
+  await sql`INSERT INTO notes (content, embedding) VALUES (${r.content}, ${JSON.stringify(r.embedding)}) ON CONFLICT (content) DO NOTHING`
 }
 

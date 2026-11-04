@@ -1,8 +1,9 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 
+
 CREATE TABLE  IF NOT EXISTS notes(
   id SERIAL PRIMARY KEY,
-  content TEXT NOT NULL,
+  content TEXT NOT NULL UNIQUE,
   embedding VECTOR(768)
 );
 
