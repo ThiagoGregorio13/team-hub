@@ -5,7 +5,9 @@
   },
   "dependencies": {
     "@google/genai": "^2.31.0",
-    "hono": "^4.13.14"
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "hono": "^4.13.14",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/bun": "latest"
