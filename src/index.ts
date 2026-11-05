@@ -169,6 +169,24 @@ const requireAuth = createMiddleware<{ Variables: { user: JWTPayload } }>(
   },
 );
 
+const requireAdmin = createMiddleware<{ Variables: { user: JWTPayload } }>(
+  async (c, next) => {
+
+const user = c.get("user")
+if(user.role !== "admin"){
+  return c.json({error: "forbidden"}, 403)
+}
+   
+    await next();
+  },
+);
+
+app.get("/admin/users", requireAuth, requireAdmin, async (c) => {
+  const rows = await sql`SELECT id, email, role, created_at FROM users`;
+  return c.json(rows);
+});
+
+
 app.get("/me", requireAuth, (c) => c.json(c.get("user")));
 
 
