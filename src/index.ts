@@ -8,7 +8,17 @@ import {
   type Content,
 } from "@google/genai";
 
-import { getTasks, getTaskByMember, getOverdueTasks, searchNotes, type TaskRow, type DeliveryTime, type StatusCount, MemberCount, getStatsByStatus, getStatsByMember
+import {
+  getTasks,
+  getTaskByMember,
+  getOverdueTasks,
+  searchNotes,
+  type TaskRow,
+  type DeliveryTime,
+  type StatusCount,
+  MemberCount,
+  getStatsByStatus,
+  getStatsByMember,
 } from "./tools";
 
 const ai = new GoogleGenAI({});
@@ -104,15 +114,18 @@ const searchNotesDeclaration: FunctionDeclaration = {
     properties: {
       query: {
         type: Type.STRING,
-        description:
-          "The search query to find relevant notes.",
+        description: "The search query to find relevant notes.",
       },
     },
     required: ["query"],
   },
 };
 
-const TOOLS = [getTasksByMemberDeclaration, getOverdueTasksDeclaration, searchNotesDeclaration];
+const TOOLS = [
+  getTasksByMemberDeclaration,
+  getOverdueTasksDeclaration,
+  searchNotesDeclaration,
+];
 
 async function runTool(name: string, args: Record<string, unknown>) {
   if (name === "get_tasks_by_member") {
@@ -241,7 +254,6 @@ app.delete("/tasks/:id", async (c) => {
 });
 
 app.post("/tasks", async (c) => {
-
   const body = await c.req.json();
   if (!body.title) {
     return c.json({ error: "title is required" }, 400);
@@ -269,20 +281,23 @@ WHERE id = ${body.member_id}`;
     ${body.due_date}
 )  RETURNING  id, title, status, member_id, due_date`;
 
-const webhookurl = process.env.N8N_WEBHOOK_URL
+  const webhookurl = process.env.N8N_WEBHOOK_URL;
 
-if(webhookurl) {
-  try{
-    await fetch(webhookurl, {
-      method: "POST",
-      headers: {"Content-type": "application/json"},
-      body: JSON.stringify({title: rows[0].title, member: rows_select[0].name, due_date: body.due_date})
-    })
+  if (webhookurl) {
+    try {
+      await fetch(webhookurl, {
+        method: "POST",
+        headers: { "Content-type": "application/json" },
+        body: JSON.stringify({
+          title: rows[0].title,
+          member: rows_select[0].name,
+          due_date: body.due_date,
+        }),
+      });
+    } catch (err) {
+      console.error("failed to notify webhook", err);
+    }
   }
-  catch(err) {
-console.error("failed to notify webhook", err)
-  }
-}
 
   return c.json(rows[0], 201);
 });
@@ -297,30 +312,55 @@ app.get("/members", async (c) => {
 app.post("/auth/register", async (c) => {
   const body = await c.req.json();
 
-  if(!body.email || !body.password){
-    return c.json({error: "email and password are required"}, 400)
+  if (!body.email || !body.password) {
+    return c.json({ error: "email and password are required" }, 400);
   }
 
-if(body.password.length < 8) {
-  return c.json({error: "password must be at least 8 characters"}, 400)
-}
+  if (body.password.length < 8) {
+    return c.json({ error: "password must be at least 8 characters" }, 400);
+  }
 
-const email = body.email.toLowerCase().trim();
-const password_hash = await Bun.password.hash(body.password)
+  const email = body.email.toLowerCase().trim();
+  const password_hash = await Bun.password.hash(body.password);
 
-const rows = await sql`
+  const rows = await sql`
 INSERT INTO users (email, password_hash) VALUES (${email}, ${password_hash}) 
 ON CONFLICT (email) DO NOTHING
 RETURNING id, email, role 
-`
-if (rows.length === 0){
-  return c.json({error: "email already registered"}, 409)
-}
+`;
+  if (rows.length === 0) {
+    return c.json({ error: "email already registered" }, 409);
+  }
 
-return c.json(rows[0], 201)
+  return c.json(rows[0], 201);
+});
 
-}
+app.post("/auth/login", async (c) => {
+  const body = await c.req.json();
 
-);
+  if (!body.email || !body.password) {
+    return c.json({ error: "email and password are required" }, 400);
+  }
 
+  const email = body.email.toLowerCase().trim();
+
+  const rows = await sql`
+SELECT id, email, role, password_hash FROM users WHERE email = ${email}
+`;
+  const user = rows[0];
+
+  if (!user) {
+    return c.json({ error: "invalid email or password" }, 401);
+  }
+
+  const passwordValid = await Bun.password.verify(
+   body.password,
+   user.password_hash
+  );
+
+  if (!passwordValid) {
+    return c.json({ error: "invalid email or password" }, 401);
+  }
+  return c.json({ id: user.id, email: user.email, role: user.role });
+});
 export default app;
