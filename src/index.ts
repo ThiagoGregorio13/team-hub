@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { sql } from "bun";
+import { hash, sql } from "bun";
 import {
   GoogleGenAI,
   Type,
@@ -294,6 +294,33 @@ app.get("/members", async (c) => {
   return c.json(rows);
 });
 
+app.post("/auth/register", async (c) => {
+  const body = await c.req.json();
 
+  if(!body.email || !body.password){
+    return c.json({error: "email and password are required"}, 400)
+  }
+
+if(body.password.length < 8) {
+  return c.json({error: "password must be at least 8 characters"}, 400)
+}
+
+const email = body.email.toLowerCase().trim();
+const password_hash = await Bun.password.hash(body.password)
+
+const rows = await sql`
+INSERT INTO users (email, password_hash) VALUES (${email}, ${password_hash}) 
+ON CONFLICT (email) DO NOTHING
+RETURNING id, email, role 
+`
+if (rows.length === 0){
+  return c.json({error: "email already registered"}, 409)
+}
+
+return c.json(rows[0], 201)
+
+}
+
+);
 
 export default app;

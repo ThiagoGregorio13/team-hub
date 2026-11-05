@@ -21,3 +21,11 @@ CREATE TABLE  IF NOT EXISTS tasks(
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   completed_at TIMESTAMPTZ
 );
+
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'admin')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
