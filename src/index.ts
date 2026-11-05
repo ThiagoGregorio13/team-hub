@@ -1,6 +1,7 @@
 import { Hono } from "hono";
+import { sign } from "hono/jwt";
 import { cors } from "hono/cors";
-import { hash, sql } from "bun";
+import { sql } from "bun";
 import {
   GoogleGenAI,
   Type,
@@ -354,13 +355,30 @@ SELECT id, email, role, password_hash FROM users WHERE email = ${email}
   }
 
   const passwordValid = await Bun.password.verify(
-   body.password,
-   user.password_hash
+    body.password,
+    user.password_hash,
   );
 
   if (!passwordValid) {
     return c.json({ error: "invalid email or password" }, 401);
   }
-  return c.json({ id: user.id, email: user.email, role: user.role });
+
+  const ticket = await sign(
+    {
+      sub: user.id,
+      role: user.role,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60,
+    },
+    process.env.JWT_SECRET!,
+    "HS256",
+  );
+
+  return c.json({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    token: ticket,
+  });
 });
+
 export default app;
