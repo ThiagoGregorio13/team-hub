@@ -1,5 +1,7 @@
 import { Hono } from "hono";
-import { sign } from "hono/jwt";
+import { sign, verify } from "hono/jwt";
+import { createMiddleware } from "hono/factory";
+import type { JWTPayload } from "hono/utils/jwt/types";
 import { cors } from "hono/cors";
 import { sql } from "bun";
 import {
@@ -142,6 +144,33 @@ async function runTool(name: string, args: Record<string, unknown>) {
   }
   return { error: `Unknown command: ${name}` };
 }
+
+const requireAuth = createMiddleware<{ Variables: { user: JWTPayload } }>(
+  async (c, next) => {
+    const header = c.req.header("Authorization");
+
+    if (!header?.startsWith("Bearer ")) {
+      return c.json({ error: "missing token" }, 401);
+    }
+    const token = header.slice("Bearer ".length);
+
+    try {
+      const payload = await verify(
+        token,
+        process.env.JWT_SECRET!,
+       "HS256",
+      );
+      c.set("user", payload);
+    } catch {
+      return c.json({ error: "invalid or expired token" }, 401);
+    }
+
+    await next();
+  },
+);
+
+app.get("/me", requireAuth, (c) => c.json(c.get("user")));
+
 
 app.post("/ai/chat", async (c) => {
   const body = await c.req.json();
