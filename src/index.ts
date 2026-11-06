@@ -479,7 +479,7 @@ app.patch("/tasks/:id/checklist/:itemId", async (c) => {
   }
   const rows = await sql`
     UPDATE task_checklist_items SET done = ${body.done}
-    WHERE id = ${itemId} AND task_Id = ${tasksId}
+    WHERE id = ${itemId} AND task_id = ${tasksId}
     RETURNING id, title, done
   `;
 

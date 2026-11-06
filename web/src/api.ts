@@ -22,6 +22,11 @@ export type StatusCount = { status: Status; total: number };
 export type MemberCount = { name: string; total: number };
 
 export type AiSummary = { summary: string; date: string };
+export type ChecklistItem = {
+  id: number;
+  title: string;
+  done: boolean;
+};
 
 // Em dev o Vite repassa "/api" para localhost:3000 (vite.config.ts)
 const API_URL = import.meta.env.VITE_API_URL ?? "/api";
@@ -101,6 +106,12 @@ export const deleteTask = (id: number) => del(`/tasks/${id}`);
 export const askTeam = (question: string) =>
   post<ChatAnswer>("/ai/chat", { question });
 export const getMembers = () => get<Member[]>("/members");
+export const getChecklist = (taskId: number) =>
+  get<ChecklistItem[]>(`/tasks/${taskId}/checklist`);
+
+export const addChecklistItem = (taskId: number, title: string) =>
+  post<ChecklistItem>(`/tasks/${taskId}/checklist`, { title });
+
 export const createTask = (
   title: string,
   member_id: number,
@@ -194,3 +205,12 @@ export function formatDuration(hours: number): string {
   if (rest === 0) return plural(days, "dia");
   return `${plural(days, "dia")} e ${rest} h`;
 }
+
+export const toggleChecklistItem = (
+  taskId: number,
+  itemId: number,
+  done: boolean,
+) => patch<ChecklistItem>(`/tasks/${taskId}/checklist/${itemId}`, { done });
+
+export const deleteChecklistItem = (taskId: number, itemId: number) =>
+  del(`/tasks/${taskId}/checklist/${itemId}`);

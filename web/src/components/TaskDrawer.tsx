@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { TaskChecklist } from "./TaskChecklist";
 import { CalendarDays, Trash2, X } from "lucide-react";
 import {
   STATUS_LABEL,
@@ -83,6 +84,7 @@ export function TaskDrawer({ task, today, onClose, onStatusChange, onDelete }: T
               </label>
             ))}
           </fieldset>
+          <TaskChecklist key={task.id} taskId={task.id} />
            <button className="button button--danger" onClick={() => onDelete(task.id)}>
             <Trash2 size={16} aria-hidden="true" />
             Excluir tarefa
