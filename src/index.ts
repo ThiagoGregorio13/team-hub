@@ -1,5 +1,10 @@
 import { Hono } from "hono";
+import { sign, verify } from "hono/jwt";
+import { createMiddleware } from "hono/factory";
+import type { JWTPayload } from "hono/utils/jwt/types";
 import { cors } from "hono/cors";
+import { bearerAuth } from "hono/bearer-auth";
+import type { Context } from "hono";
 import { sql } from "bun";
 import {
   GoogleGenAI,
@@ -8,7 +13,17 @@ import {
   type Content,
 } from "@google/genai";
 
-import { getTasks, getTaskByMember, getOverdueTasks, searchNotes, type TaskRow, type DeliveryTime, type StatusCount, MemberCount, getStatsByStatus, getStatsByMember
+import {
+  getTasks,
+  getTaskByMember,
+  getOverdueTasks,
+  searchNotes,
+  type TaskRow,
+  type DeliveryTime,
+  type StatusCount,
+  MemberCount,
+  getStatsByStatus,
+  getStatsByMember,
 } from "./tools";
 
 const ai = new GoogleGenAI({});
@@ -19,6 +34,48 @@ app.use(
   "*",
   cors({ origin: process.env.FRONTEND_URL ?? "http://localhost:5173" }),
 );
+
+const requireAuth = createMiddleware<{ Variables: { user: JWTPayload } }>(
+  async (c, next) => {
+    const header = c.req.header("Authorization");
+
+    if (!header?.startsWith("Bearer ")) {
+      return c.json({ error: "missing token" }, 401);
+    }
+    const token = header.slice("Bearer ".length);
+
+    try {
+      const payload = await verify(
+        token,
+        process.env.JWT_SECRET!,
+       "HS256",
+      );
+      c.set("user", payload);
+    } catch {
+      return c.json({ error: "invalid or expired token" }, 401);
+    }
+
+    await next();
+  },
+);
+
+const requireAdmin = createMiddleware<{ Variables: { user: JWTPayload } }>(
+  async (c, next) => {
+
+const user = c.get("user")
+if(user.role !== "admin"){
+  return c.json({error: "forbidden"}, 403)
+}
+   
+    await next();
+  },
+);
+
+app.use("/tasks/*", requireAuth)
+app.use("/stats/*", requireAuth)
+app.use("/members/*", requireAuth)
+app.use("/ai/*", requireAuth)
+
 
 async function getStatsByAvgHours(): Promise<DeliveryTime[]> {
   const rows: DeliveryTime[] = await sql`
@@ -38,7 +95,7 @@ app.get("/tasks/overdue", async (c) => {
   return c.json(rows);
 });
 
-app.get("/ai/summary", async (c) => {
+async function handleSummary(c: Context){
   const today = new Date().toISOString().slice(0, 10);
   const rows: TaskRow[] = await getTasks();
 
@@ -63,7 +120,12 @@ Answer in Brazilian Portuguese.
     console.error("Error generating summary", error);
     return c.json({ error: "Failed to generate summary" }, 503);
   }
-});
+};
+
+const requireServiceKey = bearerAuth({token: process.env.N8N_API_KEY!})
+
+app.get("/ai/summary", handleSummary);
+app.get("/integrations/summary", requireServiceKey, handleSummary)
 
 const getOverdueTasksDeclaration: FunctionDeclaration = {
   name: "get_overdue_tasks",
@@ -104,15 +166,18 @@ const searchNotesDeclaration: FunctionDeclaration = {
     properties: {
       query: {
         type: Type.STRING,
-        description:
-          "The search query to find relevant notes.",
+        description: "The search query to find relevant notes.",
       },
     },
     required: ["query"],
   },
 };
 
-const TOOLS = [getTasksByMemberDeclaration, getOverdueTasksDeclaration, searchNotesDeclaration];
+const TOOLS = [
+  getTasksByMemberDeclaration,
+  getOverdueTasksDeclaration,
+  searchNotesDeclaration,
+];
 
 async function runTool(name: string, args: Record<string, unknown>) {
   if (name === "get_tasks_by_member") {
@@ -128,6 +193,16 @@ async function runTool(name: string, args: Record<string, unknown>) {
   }
   return { error: `Unknown command: ${name}` };
 }
+
+
+app.get("/admin/users", requireAuth, requireAdmin, async (c) => {
+  const rows = await sql`SELECT id, email, role, created_at FROM users`;
+  return c.json(rows);
+});
+
+
+app.get("/me", requireAuth, (c) => c.json(c.get("user")));
+
 
 app.post("/ai/chat", async (c) => {
   const body = await c.req.json();
@@ -241,7 +316,6 @@ app.delete("/tasks/:id", async (c) => {
 });
 
 app.post("/tasks", async (c) => {
-
   const body = await c.req.json();
   if (!body.title) {
     return c.json({ error: "title is required" }, 400);
@@ -269,20 +343,23 @@ WHERE id = ${body.member_id}`;
     ${body.due_date}
 )  RETURNING  id, title, status, member_id, due_date`;
 
-const webhookurl = process.env.N8N_WEBHOOK_URL
+  const webhookurl = process.env.N8N_WEBHOOK_URL;
 
-if(webhookurl) {
-  try{
-    await fetch(webhookurl, {
-      method: "POST",
-      headers: {"Content-type": "application/json"},
-      body: JSON.stringify({title: rows[0].title, member: rows_select[0].name, due_date: body.due_date})
-    })
+  if (webhookurl) {
+    try {
+      await fetch(webhookurl, {
+        method: "POST",
+        headers: { "Content-type": "application/json" },
+        body: JSON.stringify({
+          title: rows[0].title,
+          member: rows_select[0].name,
+          due_date: body.due_date,
+        }),
+      });
+    } catch (err) {
+      console.error("failed to notify webhook", err);
+    }
   }
-  catch(err) {
-console.error("failed to notify webhook", err)
-  }
-}
 
   return c.json(rows[0], 201);
 });
@@ -294,6 +371,75 @@ app.get("/members", async (c) => {
   return c.json(rows);
 });
 
+app.post("/auth/register", requireAuth, requireAdmin, async (c) => {
+  const body = await c.req.json();
 
+  if (!body.email || !body.password) {
+    return c.json({ error: "email and password are required" }, 400);
+  }
+
+  if (body.password.length < 8) {
+    return c.json({ error: "password must be at least 8 characters" }, 400);
+  }
+
+  const email = body.email.toLowerCase().trim();
+  const password_hash = await Bun.password.hash(body.password);
+
+  const rows = await sql`
+INSERT INTO users (email, password_hash) VALUES (${email}, ${password_hash}) 
+ON CONFLICT (email) DO NOTHING
+RETURNING id, email, role 
+`;
+  if (rows.length === 0) {
+    return c.json({ error: "email already registered" }, 409);
+  }
+
+  return c.json(rows[0], 201);
+});
+
+app.post("/auth/login", async (c) => {
+  const body = await c.req.json();
+
+  if (!body.email || !body.password) {
+    return c.json({ error: "email and password are required" }, 400);
+  }
+
+  const email = body.email.toLowerCase().trim();
+
+  const rows = await sql`
+SELECT id, email, role, password_hash FROM users WHERE email = ${email}
+`;
+  const user = rows[0];
+
+  if (!user) {
+    return c.json({ error: "invalid email or password" }, 401);
+  }
+
+  const passwordValid = await Bun.password.verify(
+    body.password,
+    user.password_hash,
+  );
+
+  if (!passwordValid) {
+    return c.json({ error: "invalid email or password" }, 401);
+  }
+
+  const ticket = await sign(
+    {
+      sub: user.id,
+      role: user.role,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60,
+    },
+    process.env.JWT_SECRET!,
+    "HS256",
+  );
+
+  return c.json({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    token: ticket,
+  });
+});
 
 export default app;

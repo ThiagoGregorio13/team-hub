@@ -10,13 +10,13 @@ export type TaskRow = {
 };
 
 export type Member = {
-    name: string;
-id: number;
-}
+  name: string;
+  id: number;
+};
 
 export type DeliveryTime = {
-  avg_hours: number | null
-}
+  avg_hours: number | null;
+};
 
 export type StatusCount = { status: Status; total: number };
 export type MemberCount = { name: string; total: number };
@@ -26,29 +26,48 @@ export type AiSummary = { summary: string; date: string };
 // Em dev o Vite repassa "/api" para localhost:3000 (vite.config.ts)
 const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function handleUnauthorized(res: Response) {
+  if (res.status === 401 && getToken()) {
+    clearToken();
+    window.location.reload();
+  }
+}
+
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`);
+  const res = await fetch(`${API_URL}${path}`, { headers: authHeaders() });
+  handleUnauthorized(res);
   if (!res.ok) {
     throw new Error(`GET ${path} falhou com status ${res.status}`);
   }
   return res.json();
 }
 
-async function patch<T>(path:string, body:unknown): Promise<T> {
-const res = await fetch(`${API_URL}${path}`, {
-  method: "PATCH",
-  headers: {"Content-type": "application/json"},
-  body: JSON.stringify(body)
-})
-if(!res.ok) {
-      throw new Error(`PATCH ${path} falhou com status ${res.status}`);
-}
-return res.json()
+async function patch<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "PATCH",
+    headers: { "Content-type": "application/json", ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  handleUnauthorized(res);
+  if (!res.ok) {
+    throw new Error(`PATCH ${path} falhou com status ${res.status}`);
+  }
+  return res.json();
 }
 
 // Sem <T> e sem res.json(): o DELETE responde 204, que não tem corpo para ler
 async function del(path: string): Promise<void> {
-  const res = await fetch(`${API_URL}${path}`, { method: "DELETE" });
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  handleUnauthorized(res);
+
   if (!res.ok) {
     throw new Error(`DELETE ${path} falhou com status ${res.status}`);
   }
@@ -57,9 +76,11 @@ async function del(path: string): Promise<void> {
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     method: "POST",
-    headers: { "Content-type": "application/json" },
+    headers: { "Content-type": "application/json", ...authHeaders() },
     body: JSON.stringify(body),
   });
+  handleUnauthorized(res);
+
   if (!res.ok) {
     throw new Error(`POST ${path} falhou com status ${res.status}`);
   }
@@ -73,18 +94,41 @@ export const getStatsByStatus = () => get<StatusCount[]>("/stats/by-status");
 export const getStatsByMember = () => get<MemberCount[]>("/stats/by-member");
 export const getAiSummary = () => get<AiSummary>("/ai/summary");
 export const getOverdueTasks = () => get<TaskRow[]>("/tasks/overdue");
-export const getDeliveryTime = () => get<DeliveryTime>("/stats/delivery-time")
-export const patchStatus = (id:number, status:Status) => patch<{ id: number; status: Status }>(`/tasks/${id}`, {status})
+export const getDeliveryTime = () => get<DeliveryTime>("/stats/delivery-time");
+export const patchStatus = (id: number, status: Status) =>
+  patch<{ id: number; status: Status }>(`/tasks/${id}`, { status });
 export const deleteTask = (id: number) => del(`/tasks/${id}`);
-export const askTeam = (question: string) => post<ChatAnswer>("/ai/chat", { question });
-export const getMembers = () => get<Member[]>("/members")
-export const createTask = (title:string, member_id: number, due_date: string) => post<{id: number}>("/tasks", {title, member_id, due_date})
+export const askTeam = (question: string) =>
+  post<ChatAnswer>("/ai/chat", { question });
+export const getMembers = () => get<Member[]>("/members");
+export const createTask = (
+  title: string,
+  member_id: number,
+  due_date: string,
+) => post<{ id: number }>("/tasks", { title, member_id, due_date });
+
+export type LoginResponse = {
+  id: number;
+  email: string;
+  role: "member" | "admin";
+  token: string;
+};
+
+const TOKEN_KEY = "team_hub_token";
+
+export const getToken = () => localStorage.getItem(TOKEN_KEY);
+export const saveToken = (token: string) =>
+  localStorage.setItem(TOKEN_KEY, token);
+export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+
+export const login = (email: string, password: string) =>
+  post<LoginResponse>("/auth/login", { email, password });
+
 export const STATUS_LABEL: Record<Status, string> = {
   pending: "Pendente",
   in_progress: "Em andamento",
   done: "Concluída",
 };
-
 
 // Mesma ordem em todos os gráficos e legendas
 export const STATUS_ORDER: Status[] = ["pending", "in_progress", "done"];
@@ -142,11 +186,11 @@ export function describeDue(task: TaskRow, today: string): string {
   return `vence em ${days} dias`;
 }
 
-export function formatDuration(hours:number): string {
-  const days = Math.floor(hours/24)
-  const rest = Math.round(hours % 24)
+export function formatDuration(hours: number): string {
+  const days = Math.floor(hours / 24);
+  const rest = Math.round(hours % 24);
 
-  if(days === 0 ) return `${rest} h`
-  if(rest === 0 ) return plural(days, "dia")
-return `${plural(days, "dia")} e ${rest} h`;
+  if (days === 0) return `${rest} h`;
+  if (rest === 0) return plural(days, "dia");
+  return `${plural(days, "dia")} e ${rest} h`;
 }
