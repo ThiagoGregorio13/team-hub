@@ -33,6 +33,48 @@ app.use(
   cors({ origin: process.env.FRONTEND_URL ?? "http://localhost:5173" }),
 );
 
+const requireAuth = createMiddleware<{ Variables: { user: JWTPayload } }>(
+  async (c, next) => {
+    const header = c.req.header("Authorization");
+
+    if (!header?.startsWith("Bearer ")) {
+      return c.json({ error: "missing token" }, 401);
+    }
+    const token = header.slice("Bearer ".length);
+
+    try {
+      const payload = await verify(
+        token,
+        process.env.JWT_SECRET!,
+       "HS256",
+      );
+      c.set("user", payload);
+    } catch {
+      return c.json({ error: "invalid or expired token" }, 401);
+    }
+
+    await next();
+  },
+);
+
+const requireAdmin = createMiddleware<{ Variables: { user: JWTPayload } }>(
+  async (c, next) => {
+
+const user = c.get("user")
+if(user.role !== "admin"){
+  return c.json({error: "forbidden"}, 403)
+}
+   
+    await next();
+  },
+);
+
+app.use("/tasks/*", requireAuth)
+app.use("/stats/*", requireAuth)
+app.use("/members/*", requireAuth)
+app.use("/ai/*", requireAuth)
+
+
 async function getStatsByAvgHours(): Promise<DeliveryTime[]> {
   const rows: DeliveryTime[] = await sql`
   SELECT (EXTRACT(EPOCH FROM AVG(completed_at - created_at)) / 3600)::float AS avg_hours
@@ -145,41 +187,6 @@ async function runTool(name: string, args: Record<string, unknown>) {
   return { error: `Unknown command: ${name}` };
 }
 
-const requireAuth = createMiddleware<{ Variables: { user: JWTPayload } }>(
-  async (c, next) => {
-    const header = c.req.header("Authorization");
-
-    if (!header?.startsWith("Bearer ")) {
-      return c.json({ error: "missing token" }, 401);
-    }
-    const token = header.slice("Bearer ".length);
-
-    try {
-      const payload = await verify(
-        token,
-        process.env.JWT_SECRET!,
-       "HS256",
-      );
-      c.set("user", payload);
-    } catch {
-      return c.json({ error: "invalid or expired token" }, 401);
-    }
-
-    await next();
-  },
-);
-
-const requireAdmin = createMiddleware<{ Variables: { user: JWTPayload } }>(
-  async (c, next) => {
-
-const user = c.get("user")
-if(user.role !== "admin"){
-  return c.json({error: "forbidden"}, 403)
-}
-   
-    await next();
-  },
-);
 
 app.get("/admin/users", requireAuth, requireAdmin, async (c) => {
   const rows = await sql`SELECT id, email, role, created_at FROM users`;
@@ -357,7 +364,7 @@ app.get("/members", async (c) => {
   return c.json(rows);
 });
 
-app.post("/auth/register", async (c) => {
+app.post("/auth/register", requireAuth, requireAdmin, async (c) => {
   const body = await c.req.json();
 
   if (!body.email || !body.password) {
