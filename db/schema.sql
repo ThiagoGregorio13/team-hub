@@ -37,3 +37,15 @@ CREATE TABLE IF NOT EXISTS task_checklist_items (
   done BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS task_reviews(
+  id SERIAL PRIMARY KEY,
+  task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  art_url TEXT NOT NULL,
+status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'changes_requested')),
+  comment TEXT NULL,
+  requested_by INTEGER NOT NULL REFERENCES users(id),
+  reviewed_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  reviewed_at TIMESTAMPTZ
+ );

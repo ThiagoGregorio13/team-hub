@@ -29,7 +29,7 @@ import {
 const ai = new GoogleGenAI({});
 const MODEL = "gemini-3.1-flash-lite";
 
-const app = new Hono();
+const app = new Hono<{ Variables: { user: JWTPayload } }>();
 app.use(
   "*",
   cors({ origin: process.env.FRONTEND_URL ?? "http://localhost:5173" }),
@@ -77,6 +77,16 @@ async function getStatsByAvgHours(): Promise<DeliveryTime[]> {
     FROM tasks
     WHERE status = 'done'`;
   return rows;
+}
+
+function isHttpUrl(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    const { protocol } = new URL(value);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 app.get("/tasks", async (c) => {
@@ -506,5 +516,44 @@ RETURNING id
 
   return c.body(null, 204);
 });
+
+app.get("/tasks/:id/reviews", async (c) => {
+  const taskId = Number(c.req.param("id"));
+
+  const rows = await sql`
+SELECT id, art_url, status, created_at
+FROM task_reviews 
+WHERE task_id = ${taskId}
+ORDER BY id DESC
+`;
+  return c.json(rows);
+});
+
+app.post("/tasks/:id/reviews", async (c) => {
+    const taskId = Number(c.req.param("id"));
+    const body = await c.req.json();
+    const user = c.get("user");
+
+    if(!isHttpUrl(body.art_url)){
+return c.json({ error: "art_url must be a valid link" }, 400);
+    }
+
+    const taskReviews = await sql`
+    SELECT id FROM tasks WHERE id = ${taskId}
+    `
+    if(taskReviews.length === 0){
+return c.json({ error: "task not found" }, 404);
+    }
+
+    const rows = await sql `
+INSERT INTO task_reviews (task_id, art_url, requested_by)
+    VALUES (${taskId}, ${body.art_url}, ${Number(user.sub)})
+    RETURNING id, art_url, status, created_at
+    `
+
+return c.json(rows[0], 201)
+
+
+})
 
 export default app;
