@@ -79,6 +79,22 @@ export const deleteTask = (id: number) => del(`/tasks/${id}`);
 export const askTeam = (question: string) => post<ChatAnswer>("/ai/chat", { question });
 export const getMembers = () => get<Member[]>("/members")
 export const createTask = (title:string, member_id: number, due_date: string) => post<{id: number}>("/tasks", {title, member_id, due_date})
+
+export type LoginResponse = {
+  id: number;
+  email: string;
+  role: "member" | "admin";
+  token: string;
+}
+
+const TOKEN_KEY = "team_hub_token";
+
+export const getToken = () => localStorage.getItem(TOKEN_KEY)
+export const saveToken = (token:string) => localStorage.setItem(TOKEN_KEY, token)
+export const clearToken = () => localStorage.removeItem(TOKEN_KEY)
+
+export const login = (email:string, password:string ) => post<LoginResponse>("/auth/login", {email, password});
+
 export const STATUS_LABEL: Record<Status, string> = {
   pending: "Pendente",
   in_progress: "Em andamento",
