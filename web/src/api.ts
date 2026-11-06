@@ -31,6 +31,16 @@ export type ChecklistItem = {
 // Em dev o Vite repassa "/api" para localhost:3000 (vite.config.ts)
 const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 
+// Guarda o status para a tela diferenciar, por exemplo, senha errada (401) de email repetido (409)
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 function authHeaders(): Record<string, string> {
   const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -87,7 +97,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   handleUnauthorized(res);
 
   if (!res.ok) {
-    throw new Error(`POST ${path} falhou com status ${res.status}`);
+    throw new ApiError(`POST ${path} falhou com status ${res.status}`, res.status);
   }
   return res.json();
 }
@@ -134,6 +144,22 @@ export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
 export const login = (email: string, password: string) =>
   post<LoginResponse>("/auth/login", { email, password });
+
+export const register = (email: string, password: string) =>
+  post<Omit<LoginResponse, "token">>("/auth/register", { email, password });
+
+// Só decide o que mostrar na tela: quem confere a permissão de verdade é a API
+export function isAdminSession(): boolean {
+  const payload = getToken()?.split(".")[1];
+  if (!payload) return false;
+
+  try {
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(json).role === "admin";
+  } catch {
+    return false;
+  }
+}
 
 export const STATUS_LABEL: Record<Status, string> = {
   pending: "Pendente",

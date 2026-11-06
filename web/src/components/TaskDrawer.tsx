@@ -71,21 +71,25 @@ export function TaskDrawer({ task, today, onClose, onStatusChange, onDelete }: T
 
           <fieldset className="segmented">
             <legend>Status</legend>
-            {STATUS_ORDER.map((status) => (
-              <label key={status} className={`segmented__option segmented__option--${status}`}>
-                <input
-                  type="radio"
-                  name="status"
-                  value={status}
-                  checked={task.status === status}
-                  onChange={() => onStatusChange(task.id, status)}
-                />
-                <span>{STATUS_LABEL[status]}</span>
-              </label>
-            ))}
+            <div className="segmented__track">
+              {STATUS_ORDER.map((status) => (
+                <label key={status} className={`segmented__option segmented__option--${status}`}>
+                  <input
+                    type="radio"
+                    name="status"
+                    value={status}
+                    checked={task.status === status}
+                    onChange={() => onStatusChange(task.id, status)}
+                  />
+                  <span>{STATUS_LABEL[status]}</span>
+                </label>
+              ))}
+            </div>
           </fieldset>
+
           <TaskChecklist key={task.id} taskId={task.id} />
-           <button className="button button--danger" onClick={() => onDelete(task.id)}>
+
+          <button className="button button--danger" onClick={() => onDelete(task.id)}>
             <Trash2 size={16} aria-hidden="true" />
             Excluir tarefa
           </button>

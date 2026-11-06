@@ -4,6 +4,7 @@ import {
   getDeliveryTime,
   getStatsByMember,
   getTasks,
+  isAdminSession,
   isOverdue,
   patchStatus,
   todayLocal,
@@ -25,6 +26,7 @@ import { TaskDrawer } from "./components/TaskDrawer";
 import { AskTeam } from "./components/AskTeam";
 import "./App.css";
 import { NewTaskForm } from "./components/NewTaskForm";
+import { RegisterDialog } from "./components/RegisterDialog";
 import {DialogCancel } from "./components/ConfirmDialog"
 
 type DashboardData = {
@@ -45,6 +47,7 @@ function App() {
   const [taskToDelete, setTaskToDelete] = useState<number | null>(null);
   const [ask, setAsk] = useState<AskMode>("closed");
   const [newTaskOpen, setNewTaskOpen] = useState(false);
+  const [registerOpen, setRegisterOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -137,7 +140,10 @@ setTaskToDelete(id);
           lateCount={lateCount}
           onShowLate={showLate}
           onAsk={() => setAsk("chat")}
+          onCreateUser={isAdminSession() ? () => setRegisterOpen(true) : undefined}
         />
+
+        {registerOpen && <RegisterDialog onClose={() => setRegisterOpen(false)} />}
 
         <main className="content" id="overview">
           {error && <p className="notice">{error}</p>}

@@ -1,7 +1,6 @@
-import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { StatusSelect } from "./StatusSelect";
 import {
-  STATUS_LABEL,
-  STATUS_ORDER,
   describeDue,
   displayName,
   formatDate,
@@ -157,24 +156,11 @@ export function TaskTable({
                   </td>
                   {/* stopPropagation: mexer no select não deve abrir a gaveta da linha */}
                   <td onClick={(e) => e.stopPropagation()}>
-                    <label
-                      className={`status-select status-select--${task.status}`}
-                    >
-                      <span className="sr-only">Status de {task.title}</span>
-                      <select
-                        value={task.status}
-                        onChange={(e) =>
-                          onStatusChange(task.id, e.target.value as Status)
-                        }
-                      >
-                        {STATUS_ORDER.map((s) => (
-                          <option key={s} value={s}>
-                            {STATUS_LABEL[s]}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={14} aria-hidden="true" />
-                    </label>
+                    <StatusSelect
+                      value={task.status}
+                      label={`Status de ${task.title}`}
+                      onChange={(status) => onStatusChange(task.id, status)}
+                    />
                   </td>
                   <td
                     className="table__actions"

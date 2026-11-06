@@ -1,4 +1,4 @@
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, UserPlus } from "lucide-react";
 
 type HeaderProps = {
   query: string;
@@ -6,12 +6,13 @@ type HeaderProps = {
   lateCount: number;
   onShowLate: () => void;
   onAsk: () => void;
+  onCreateUser?: () => void;
 };
 
 // Mostra "⌘K" no Mac e "Ctrl K" no resto
 const SHORTCUT = /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘K" : "Ctrl K";
 
-export function Header({ query, onQueryChange, lateCount, onShowLate, onAsk }: HeaderProps) {
+export function Header({ query, onQueryChange, lateCount, onShowLate, onAsk, onCreateUser }: HeaderProps) {
   const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
 
   return (
@@ -34,6 +35,11 @@ export function Header({ query, onQueryChange, lateCount, onShowLate, onAsk }: H
       </label>
 
       <div className="header__actions">
+        {onCreateUser && (
+          <button className="icon-button" onClick={onCreateUser} aria-label="Criar credencial">
+            <UserPlus size={18} aria-hidden="true" />
+          </button>
+        )}
         <button className="icon-button" onClick={onShowLate} aria-label={`${lateCount} tarefas atrasadas`}>
           <Bell size={18} />
           {lateCount > 0 && <span className="icon-button__badge">{lateCount}</span>}
