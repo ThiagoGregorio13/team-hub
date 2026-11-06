@@ -22,9 +22,24 @@ export type StatusCount = { status: Status; total: number };
 export type MemberCount = { name: string; total: number };
 
 export type AiSummary = { summary: string; date: string };
+export type ChecklistItem = {
+  id: number;
+  title: string;
+  done: boolean;
+};
 
 // Em dev o Vite repassa "/api" para localhost:3000 (vite.config.ts)
 const API_URL = import.meta.env.VITE_API_URL ?? "/api";
+
+// Guarda o status para a tela diferenciar, por exemplo, senha errada (401) de email repetido (409)
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
 
 function authHeaders(): Record<string, string> {
   const token = getToken();
@@ -82,7 +97,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   handleUnauthorized(res);
 
   if (!res.ok) {
-    throw new Error(`POST ${path} falhou com status ${res.status}`);
+    throw new ApiError(`POST ${path} falhou com status ${res.status}`, res.status);
   }
   return res.json();
 }
@@ -101,6 +116,12 @@ export const deleteTask = (id: number) => del(`/tasks/${id}`);
 export const askTeam = (question: string) =>
   post<ChatAnswer>("/ai/chat", { question });
 export const getMembers = () => get<Member[]>("/members");
+export const getChecklist = (taskId: number) =>
+  get<ChecklistItem[]>(`/tasks/${taskId}/checklist`);
+
+export const addChecklistItem = (taskId: number, title: string) =>
+  post<ChecklistItem>(`/tasks/${taskId}/checklist`, { title });
+
 export const createTask = (
   title: string,
   member_id: number,
@@ -123,6 +144,22 @@ export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
 export const login = (email: string, password: string) =>
   post<LoginResponse>("/auth/login", { email, password });
+
+export const register = (email: string, password: string) =>
+  post<Omit<LoginResponse, "token">>("/auth/register", { email, password });
+
+// Só decide o que mostrar na tela: quem confere a permissão de verdade é a API
+export function isAdminSession(): boolean {
+  const payload = getToken()?.split(".")[1];
+  if (!payload) return false;
+
+  try {
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(json).role === "admin";
+  } catch {
+    return false;
+  }
+}
 
 export const STATUS_LABEL: Record<Status, string> = {
   pending: "Pendente",
@@ -194,3 +231,12 @@ export function formatDuration(hours: number): string {
   if (rest === 0) return plural(days, "dia");
   return `${plural(days, "dia")} e ${rest} h`;
 }
+
+export const toggleChecklistItem = (
+  taskId: number,
+  itemId: number,
+  done: boolean,
+) => patch<ChecklistItem>(`/tasks/${taskId}/checklist/${itemId}`, { done });
+
+export const deleteChecklistItem = (taskId: number, itemId: number) =>
+  del(`/tasks/${taskId}/checklist/${itemId}`);

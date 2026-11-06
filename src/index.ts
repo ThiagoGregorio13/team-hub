@@ -45,11 +45,7 @@ const requireAuth = createMiddleware<{ Variables: { user: JWTPayload } }>(
     const token = header.slice("Bearer ".length);
 
     try {
-      const payload = await verify(
-        token,
-        process.env.JWT_SECRET!,
-       "HS256",
-      );
+      const payload = await verify(token, process.env.JWT_SECRET!, "HS256");
       c.set("user", payload);
     } catch {
       return c.json({ error: "invalid or expired token" }, 401);
@@ -61,21 +57,19 @@ const requireAuth = createMiddleware<{ Variables: { user: JWTPayload } }>(
 
 const requireAdmin = createMiddleware<{ Variables: { user: JWTPayload } }>(
   async (c, next) => {
+    const user = c.get("user");
+    if (user.role !== "admin") {
+      return c.json({ error: "forbidden" }, 403);
+    }
 
-const user = c.get("user")
-if(user.role !== "admin"){
-  return c.json({error: "forbidden"}, 403)
-}
-   
     await next();
   },
 );
 
-app.use("/tasks/*", requireAuth)
-app.use("/stats/*", requireAuth)
-app.use("/members/*", requireAuth)
-app.use("/ai/*", requireAuth)
-
+app.use("/tasks/*", requireAuth);
+app.use("/stats/*", requireAuth);
+app.use("/members/*", requireAuth);
+app.use("/ai/*", requireAuth);
 
 async function getStatsByAvgHours(): Promise<DeliveryTime[]> {
   const rows: DeliveryTime[] = await sql`
@@ -95,7 +89,7 @@ app.get("/tasks/overdue", async (c) => {
   return c.json(rows);
 });
 
-async function handleSummary(c: Context){
+async function handleSummary(c: Context) {
   const today = new Date().toISOString().slice(0, 10);
   const rows: TaskRow[] = await getTasks();
 
@@ -120,12 +114,12 @@ Answer in Brazilian Portuguese.
     console.error("Error generating summary", error);
     return c.json({ error: "Failed to generate summary" }, 503);
   }
-};
+}
 
-const requireServiceKey = bearerAuth({token: process.env.N8N_API_KEY!})
+const requireServiceKey = bearerAuth({ token: process.env.N8N_API_KEY! });
 
 app.get("/ai/summary", handleSummary);
-app.get("/integrations/summary", requireServiceKey, handleSummary)
+app.get("/integrations/summary", requireServiceKey, handleSummary);
 
 const getOverdueTasksDeclaration: FunctionDeclaration = {
   name: "get_overdue_tasks",
@@ -194,15 +188,12 @@ async function runTool(name: string, args: Record<string, unknown>) {
   return { error: `Unknown command: ${name}` };
 }
 
-
 app.get("/admin/users", requireAuth, requireAdmin, async (c) => {
   const rows = await sql`SELECT id, email, role, created_at FROM users`;
   return c.json(rows);
 });
 
-
 app.get("/me", requireAuth, (c) => c.json(c.get("user")));
-
 
 app.post("/ai/chat", async (c) => {
   const body = await c.req.json();
@@ -440,6 +431,80 @@ SELECT id, email, role, password_hash FROM users WHERE email = ${email}
     role: user.role,
     token: ticket,
   });
+});
+
+app.get("/tasks/:id/checklist", async (c) => {
+  const tasksId = Number(c.req.param("id"));
+
+  const rows = await sql`
+  SELECT id, title, task_id, done FROM  task_checklist_items
+  WHERE task_id = ${tasksId}
+  ORDER BY id
+  `;
+  return c.json(rows);
+});
+
+app.post("/tasks/:id/checklist", async (c) => {
+  const tasksId = Number(c.req.param("id"));
+  const body = await c.req.json();
+
+  if (!body.title) {
+    return c.json({ error: "title is required" }, 400);
+  }
+
+  const tasks = await sql`
+    SELECT id FROM tasks 
+    WHERE id = ${tasksId}
+    `;
+
+  if (tasks.length === 0) {
+    return c.json({ error: "task not found" }, 404);
+  }
+
+  const rows = await sql`
+INSERT INTO task_checklist_items (task_id, title)
+VALUES (${tasksId}, ${body.title})
+RETURNING id, title, done
+`;
+  return c.json(rows[0], 201);
+});
+
+app.patch("/tasks/:id/checklist/:itemId", async (c) => {
+  const tasksId = Number(c.req.param("id"));
+  const itemId = Number(c.req.param("itemId"));
+  const body = await c.req.json();
+
+  if (typeof body.done !== "boolean") {
+    return c.json({ error: "check must be checked or unchecked" }, 400);
+  }
+  const rows = await sql`
+    UPDATE task_checklist_items SET done = ${body.done}
+    WHERE id = ${itemId} AND task_id = ${tasksId}
+    RETURNING id, title, done
+  `;
+
+  if (rows.length === 0) {
+    return c.json({ error: "item not found" }, 404);
+  }
+
+  return c.json(rows[0]);
+});
+
+app.delete("/tasks/:id/checklist/:itemId", async (c) => {
+  const taskId = Number(c.req.param("id"));
+  const itemId = Number(c.req.param("itemId"));
+
+  const rows = await sql`
+DELETE FROM task_checklist_items
+WHERE id = ${itemId} AND task_id = ${taskId}
+RETURNING id
+`;
+
+  if (rows.length === 0) {
+    return c.json({ error: "item not found" }, 404);
+  }
+
+  return c.body(null, 204);
 });
 
 export default app;
