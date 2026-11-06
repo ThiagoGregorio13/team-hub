@@ -3,6 +3,8 @@ import { sign, verify } from "hono/jwt";
 import { createMiddleware } from "hono/factory";
 import type { JWTPayload } from "hono/utils/jwt/types";
 import { cors } from "hono/cors";
+import { bearerAuth } from "hono/bearer-auth";
+import type { Context } from "hono";
 import { sql } from "bun";
 import {
   GoogleGenAI,
@@ -93,7 +95,7 @@ app.get("/tasks/overdue", async (c) => {
   return c.json(rows);
 });
 
-app.get("/ai/summary", async (c) => {
+async function handleSummary(c: Context){
   const today = new Date().toISOString().slice(0, 10);
   const rows: TaskRow[] = await getTasks();
 
@@ -118,7 +120,12 @@ Answer in Brazilian Portuguese.
     console.error("Error generating summary", error);
     return c.json({ error: "Failed to generate summary" }, 503);
   }
-});
+};
+
+const requireServiceKey = bearerAuth({token: process.env.N8N_API_KEY!})
+
+app.get("/ai/summary", handleSummary);
+app.get("/integrations/summary", requireServiceKey, handleSummary)
 
 const getOverdueTasksDeclaration: FunctionDeclaration = {
   name: "get_overdue_tasks",
