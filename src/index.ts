@@ -521,7 +521,7 @@ app.get("/tasks/:id/reviews", async (c) => {
   const taskId = Number(c.req.param("id"));
 
   const rows = await sql`
-SELECT id, art_url, status, created_at
+SELECT id, art_url, status, created_at, comment
 FROM task_reviews 
 WHERE task_id = ${taskId}
 ORDER BY id DESC
@@ -552,7 +552,39 @@ INSERT INTO task_reviews (task_id, art_url, requested_by)
     `
 
 return c.json(rows[0], 201)
+})
 
+app.patch("/tasks/:id/reviews/:reviewId", requireAdmin, async (c) => {
+    const taskId = Number(c.req.param("id"));
+  const reviewId = Number(c.req.param("reviewId"));
+  const body = await c.req.json();
+  const user = c.get("user");
+
+    if(body.status !== "approved" && body.status !== "changes_requested"){
+return c.json({ error: "status must be approved or changes_requested" }, 400);
+    }
+
+    const comment = typeof body.comment === "string" ? body.comment.trim() : "";
+
+    if(body.status === "changes_requested" && !comment){
+      return c.json({error: "comment is required when requesting changes"}, 400)
+    }
+
+    const rows = await sql`
+    UPDATE task_reviews
+    SET status = ${body.status},
+    comment = ${comment || null},
+    reviewed_by = ${Number(user.sub)},
+    reviewed_at = now()
+    WHERE id = ${reviewId} AND task_id = ${taskId} AND status = 'pending'
+    RETURNING id, art_url, status, comment, reviewed_at
+    `
+
+    if(rows.length === 0 ){
+      return c.json({error: "pending review not found"}, 404)
+    }
+
+    return c.json(rows[0])
 
 })
 
