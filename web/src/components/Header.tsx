@@ -7,18 +7,30 @@ type HeaderProps = {
   onShowLate: () => void;
   onAsk: () => void;
   onCreateUser?: () => void;
+  // null: a página tem o próprio título grande (ex.: Artes)
+  title?: string | null;
+  searchLabel?: string;
 };
 
 // Mostra "⌘K" no Mac e "Ctrl K" no resto
 const SHORTCUT = /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘K" : "Ctrl K";
 
-export function Header({ query, onQueryChange, lateCount, onShowLate, onAsk, onCreateUser }: HeaderProps) {
+export function Header({
+  query,
+  onQueryChange,
+  lateCount,
+  onShowLate,
+  onAsk,
+  onCreateUser,
+  title = "Dashboard",
+  searchLabel = "Buscar tarefa ou pessoa...",
+}: HeaderProps) {
   const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
 
   return (
     <header className="header">
       <div className="header__title">
-        <h1>Dashboard</h1>
+        {title && <h1>{title}</h1>}
         <p className="header__date">{today}</p>
       </div>
 
@@ -29,8 +41,8 @@ export function Header({ query, onQueryChange, lateCount, onShowLate, onAsk, onC
           type="search"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="Buscar tarefa ou pessoa..."
-          aria-label="Buscar tarefa ou pessoa"
+          placeholder={searchLabel}
+          aria-label={searchLabel.replace("...", "")}
         />
       </label>
 

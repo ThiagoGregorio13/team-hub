@@ -1,7 +1,11 @@
-import { CalendarRange, LayoutGrid, ListChecks, Sparkles, Users } from "lucide-react";
+import type { MouseEvent } from "react";
+import { CalendarRange, LayoutGrid, ListChecks, Palette, Sparkles, Users } from "lucide-react";
 
 type SidebarProps = {
   onAsk: () => void;
+  view: "dashboard" | "arts";
+  // Artes abre com a transição de tinta; quem decide é o App
+  onOpenArts?: (event: MouseEvent<HTMLAnchorElement>) => void;
 };
 
 // Cada item leva até uma seção da página (âncora pelo id)
@@ -10,9 +14,14 @@ const NAV = [
   { href: "#tasks", label: "Tarefas", icon: ListChecks },
   { href: "#team", label: "Equipe", icon: Users },
   { href: "#schedule", label: "Cronograma", icon: CalendarRange },
+  { href: "#artes", label: "Artes", icon: Palette },
 ];
 
-export function Sidebar({ onAsk }: SidebarProps) {
+export function Sidebar({ onAsk, view, onOpenArts }: SidebarProps) {
+  // Artes é uma página à parte; no dashboard, "Visão geral" fica marcada
+  const active = (href: string, index: number) =>
+    view === "arts" ? href === "#artes" : index === 0;
+
   return (
     <aside className="sidebar">
       <div className="sidebar__brand">
@@ -30,7 +39,12 @@ export function Sidebar({ onAsk }: SidebarProps) {
         <ul className="nav">
           {NAV.map(({ href, label, icon: Icon }, index) => (
             <li key={href}>
-              <a className={`nav__item${index === 0 ? " is-active" : ""}`} href={href}>
+              <a
+                className={`nav__item${active(href, index) ? " is-active" : ""}`}
+                href={href}
+                aria-current={active(href, index) ? "page" : undefined}
+                onClick={href === "#artes" ? onOpenArts : undefined}
+              >
                 <Icon size={18} aria-hidden="true" />
                 {label}
               </a>
