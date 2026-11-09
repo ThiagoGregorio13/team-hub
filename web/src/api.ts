@@ -38,6 +38,15 @@ export type ChecklistItem = {
   done: boolean;
 };
 
+export type ArtAnalysis = {
+  colors:{name:string, hex:string, where:string}[];
+  request_check:{request:string, observation:string}[];
+  summary:string;
+  texts:string[];
+  style:string;
+  elements:string[]
+}
+
 // Em dev o Vite repassa "/api" para localhost:3000 (vite.config.ts)
 const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -50,6 +59,7 @@ export class ApiError extends Error {
     this.status = status;
   }
 }
+
 
 function authHeaders(): Record<string, string> {
   const token = getToken();
@@ -262,7 +272,6 @@ export const toggleChecklistItem = (
 
 export const deleteChecklistItem = (taskId: number, itemId: number) =>
   del(`/tasks/${taskId}/checklist/${itemId}`);
-
 export const submitReview = (taskId: number, artUrl: string) =>
   post<TaskReview>(`/tasks/${taskId}/reviews`, { art_url: artUrl });
 
@@ -272,3 +281,7 @@ export const decideReview = (
   status: "approved" | "changes_requested",
   comment?: string,
 ) => patch<TaskReview>(`/tasks/${taskId}/reviews/${reviewId}`, { status, comment });
+
+export const analyzeArt = (taskId: number, reviewId: number,
+) =>
+  post<ArtAnalysis>(`/tasks/${taskId}/reviews/${reviewId}/ai-analysis`, {});

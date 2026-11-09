@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Check, Copy, Layers, LoaderCircle, MessageSquareDiff, X } from "lucide-react";
-import { ApiError, decideReview, type GalleryArt } from "../../api";
+import { ApiError, decideReview, type GalleryArt, analyzeArt, type ArtAnalysis } from "../../api";
 import { ArtViewer } from "./ArtViewer";
+import { AiAnalysis } from "./AiAnalysis";
 import { STATE_LABEL, accentOf, avatarOf, initialsOf, niceName, whenLabel, type MuralItem } from "./artUtils";
 import { inkOn, usePalette } from "./palette";
 
@@ -20,7 +21,12 @@ export function ArtDetail({ item, admin, onClose, onDecided, onSendNew }: ArtDet
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const[result, setResult] = useState<ArtAnalysis | null>(null);
+  const[loading, setLoading] = useState(false)
+    const [analysisError, setAnalysisError] = useState<string | null>(null);
+
   const dialogRef = useRef<HTMLDialogElement>(null);
+  
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -71,6 +77,35 @@ export function ArtDetail({ item, admin, onClose, onDecided, onSendNew }: ArtDet
       setSending(false);
     }
   }
+
+  async function analysisAi() {
+    if (!selected || loading) return;
+    setLoading(true);
+    setAnalysisError(null);
+    try {
+   const updated = await analyzeArt(item.task.id, selected.id);
+   setResult(updated)
+    } catch (err) {
+      // Mensagem padrão: vale para o 503 (IA fora do ar) e qualquer erro inesperado
+      let message = "A análise com IA não está disponível agora. Tente de novo em alguns instantes.";
+
+      // Só um ApiError tem .status; um erro de rede (sem internet) não tem
+      if (err instanceof ApiError) {
+        if (err.status === 404) {
+          message = "Esta versão não foi encontrada. Feche e abra a arte de novo.";
+        } else if (err.status === 422) {
+          message = "Não foi possível abrir a imagem desta versão. O link precisa abrir só a imagem (terminar em .png ou .jpg, por exemplo).";
+        } else if (err.status === 413) {
+          message = "A imagem é grande demais para analisar (máximo de 8 MB).";
+        }
+      }
+
+      setAnalysisError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
 
   return (
     <dialog
@@ -135,12 +170,28 @@ export function ArtDetail({ item, admin, onClose, onDecided, onSendNew }: ArtDet
             )}
           </section>
 
+          {/* Só a direção usa: o endpoint da análise exige admin */}
+          {admin && <AiAnalysis analysis={result} loading={loading} error={analysisError} onAnalyze={analysisAi} />}
+
           {selected.comment && (
             <blockquote className="review-note">
               <span className="review-note__label">Comentário da direção</span>
               <p>{selected.comment}</p>
               {selected.reviewed_at && <footer>{whenLabel(selected.reviewed_at)}</footer>}
             </blockquote>
+          )}
+
+          {/* Sem os botões, explica o motivo em vez de só sumir com eles */}
+          {!canDecide && (
+            <p className="review-why">
+              {!admin
+                ? "Só a direção pode aprovar ou sugerir mudanças."
+                : selected.id !== item.latest?.id
+                  ? "Esta é uma versão antiga. A decisão vale para a versão mais recente."
+                  : selected.status === "approved"
+                    ? "Esta versão já foi aprovada. Para revisar de novo, envie uma nova versão."
+                    : "Ajustes já foram pedidos. Quando a nova versão chegar, ela aparece aqui para revisão."}
+            </p>
           )}
 
           {canDecide && (
@@ -224,6 +275,9 @@ export function ArtDetail({ item, admin, onClose, onDecided, onSendNew }: ArtDet
                       setSelectedId(art.id);
                       setAsking(false);
                       setError(null);
+                      // a análise e o erro dela pertencem à versão anterior: volta ao valor inicial
+                      setResult(null);
+                      setAnalysisError(null);
                     }}
                   >
                     <span className="version__thumb">

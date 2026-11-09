@@ -1,0 +1,223 @@
+/* Análise da IA, dentro do painel de detalhe da arte.
+   Mesmo vocabulário do painel: blocos com título pequeno, texto 13–14px, cantos 10–14px. */
+
+.ai__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai__title svg {
+  color: #a5472f;
+}
+
+/* Botão em largura total, discreto: a ação principal do painel continua sendo Aprovar */
+.ai__button {
+  width: 100%;
+  border: 1px solid #e0d6c8;
+  border-radius: 12px;
+  background: #fffaf3;
+  font-size: 14px;
+  color: #241b1d;
+}
+
+.ai__button:hover:not(:disabled) {
+  border-color: #241b1d;
+}
+
+.ai__button svg {
+  color: #a5472f;
+}
+
+/* Esqueleto: barras cinzas que "respiram" enquanto a IA responde */
+.ai__skeleton {
+  display: grid;
+  gap: 8px;
+}
+
+.ai__skeleton span {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f1ece4, #faf6f0, #f1ece4);
+  background-size: 200% 100%;
+  animation: ai-shimmer 1.4s linear infinite;
+}
+
+.ai__skeleton span:nth-child(2) {
+  width: 85%;
+}
+
+.ai__skeleton span:nth-child(3) {
+  width: 60%;
+}
+
+@keyframes ai-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Resultado */
+.ai__result {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #ebe3d7;
+  border-radius: 14px;
+  background: #fffdf9;
+}
+
+/* Cada grupo entra um pouco depois do anterior (efeito "escrevendo") */
+.ai__result > * {
+  animation: ai-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ai__result > :nth-child(2) { animation-delay: 0.06s; }
+.ai__result > :nth-child(3) { animation-delay: 0.12s; }
+.ai__result > :nth-child(4) { animation-delay: 0.18s; }
+.ai__result > :nth-child(5) { animation-delay: 0.24s; }
+.ai__result > :nth-child(6) { animation-delay: 0.3s; }
+.ai__result > :nth-child(7) { animation-delay: 0.36s; }
+
+@keyframes ai-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+.ai__summary {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: #241b1d;
+}
+
+.ai__group {
+  display: grid;
+  gap: 8px;
+}
+
+.ai__label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #948a86;
+}
+
+.ai__text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #5b5052;
+}
+
+/* Pedidos anteriores: o mais útil para quem revisa, com destaque lateral */
+.ai__checks {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai__checks li {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-left: 3px solid #a5472f;
+  border-radius: 0 10px 10px 0;
+  background: #f8efe9;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ai__checks strong {
+  font-weight: 700;
+  color: #241b1d;
+}
+
+.ai__checks span {
+  color: #5b5052;
+}
+
+.ai__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai__chips li {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f1ece4;
+  font-size: 13px;
+  color: #5b5052;
+}
+
+.ai__colors {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai__colors li {
+  display: grid;
+  grid-template-columns: 14px auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.ai__colors strong {
+  font-weight: 600;
+  color: #241b1d;
+}
+
+.ai__colors span:last-child {
+  overflow: hidden;
+  color: #948a86;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f1ece4; /* se o hex da IA vier inválido, fica uma bolinha neutra */
+  box-shadow: inset 0 0 0 1px rgba(36, 27, 29, 0.12);
+}
+
+.ai__texts {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: #241b1d;
+  overflow-wrap: anywhere;
+}
+
+.ai__disclaimer {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid #f1ebe2;
+  font-size: 12px;
+  color: #948a86;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai__result > *,
+  .ai__skeleton span {
+    animation: none;
+  }
+}
