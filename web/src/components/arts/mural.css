@@ -1,0 +1,22 @@
+/* Mural modernista do topo da página de Artes.
+   Ele preenche toda a área (como background-size: cover) em vez de ser um quadro:
+   o SVG usa preserveAspectRatio="xMidYMid slice", que corta as sobras em vez de deixar vazio. */
+.mural {
+  position: absolute;
+  inset: 0;
+}
+
+.mural__frame {
+  position: absolute;
+  inset: 0;
+}
+
+.mural__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.mm-brush {
+  pointer-events: none;
+}

@@ -120,37 +120,35 @@
 }
 
 .g-hero__copy {
+  position: relative;
+  z-index: 1;
   display: grid;
   justify-items: start;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
 }
 
 .g-eyebrow {
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: #f5e9eb;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--g-brand);
 }
 
 .g-hero h1 {
-  max-width: 12ch;
+  max-width: 16ch;
   margin: 0;
-  font-family: "Fraunces", Georgia, serif;
-  font-size: clamp(38px, 4vw, 54px);
-  font-weight: 400;
-  line-height: 1.04;
-  letter-spacing: -0.025em;
+  font-size: clamp(32px, 3.3vw, 44px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
   color: var(--g-ink);
 }
 
 .g-hero p {
-  max-width: 40ch;
+  max-width: 44ch;
   margin: 0;
   font-size: 16px;
-  line-height: 1.6;
+  line-height: 1.55;
   color: var(--g-muted);
 }
 
@@ -158,73 +156,87 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 6px;
+  margin-top: 12px;
 }
 
+/* O mural não é um quadro: ele ocupa o lado direito do destaque, encosta nas bordas
+   e se dissolve na direção do texto (a máscara vai de transparente a opaco) */
 .g-hero__art {
-  position: relative;
-  align-self: stretch;
-  min-height: 300px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 60%;
+  /* várias paradas = um degradê "suave" nas pontas, sem costura visível */
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.08) 10%, rgba(0, 0, 0, 0.4) 22%, rgba(0, 0, 0, 0.85) 36%, #000 46%);
+  mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.08) 10%, rgba(0, 0, 0, 0.4) 22%, rgba(0, 0, 0, 0.85) 36%, #000 46%);
 }
 
 /* ---------- Números ---------- */
+/* Mesma faixa da visão geral: uma peça só, dividida em quatro, sem ícone em cada número */
 .g-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
   margin: 0;
   padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--panel-line, var(--g-border));
+  border-radius: 18px;
+  background: var(--g-surface);
   list-style: none;
 }
 
 .g-stat {
   --fg: var(--s-pending);
-  --bg: var(--s-pending-bg);
   display: grid;
-  gap: 2px;
-  padding: 20px;
-  border: 1px solid var(--g-border);
-  border-radius: 20px;
-  background: var(--g-surface);
+  align-content: start;
+  gap: 6px;
+  padding: 20px 24px 22px;
+}
+
+.g-stat + .g-stat {
+  border-left: 1px solid var(--panel-line, var(--g-border));
 }
 
 .g-stat--changes_requested {
   --fg: var(--s-changes);
-  --bg: var(--s-changes-bg);
 }
 
 .g-stat--approved {
   --fg: var(--s-approved);
-  --bg: var(--s-approved-bg);
 }
 
 .g-stat--empty {
   --fg: var(--s-empty);
-  --bg: var(--s-empty-bg);
 }
 
 .g-stat__icon {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  margin-bottom: 14px;
-  border-radius: 12px;
-  background: var(--bg);
-  color: var(--fg);
+  display: none;
 }
 
+/* A cor do status vira um pontinho ao lado do nome, em vez de um quadrado com ícone */
 .g-stat__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
-  font-weight: 500;
-  color: var(--g-muted);
+  font-weight: 600;
+  color: var(--g-text);
+}
+
+.g-stat__label::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fg);
 }
 
 .g-stat__value {
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.03em;
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.045em;
   color: var(--g-ink);
   font-variant-numeric: tabular-nums;
 }
@@ -254,7 +266,7 @@
 .g-gallery__head h2 {
   margin: 0;
   font-size: 19px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.015em;
   color: var(--g-ink);
 }
@@ -1208,13 +1220,26 @@
     padding: 36px 32px 8px;
   }
 
+  /* Em coluna única, o mural vai para baixo do texto e se dissolve para cima */
   .g-hero__art {
-    min-height: 0;
+    position: relative;
+    width: auto;
     height: 300px;
+    margin: 8px -32px -8px;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 30%);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 30%);
   }
 
   .g-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .g-stat:nth-child(3) {
+    border-left: none;
+  }
+
+  .g-stat:nth-child(n + 3) {
+    border-top: 1px solid var(--panel-line, var(--g-border));
   }
 
   .art-detail {
@@ -1238,6 +1263,7 @@
 
   .g-hero__art {
     height: 230px;
+    margin: 4px -22px -4px;
   }
 
   .g-stat {
@@ -1275,4 +1301,15 @@
   .viewer__bar {
     justify-content: flex-end;
   }
+}
+
+/* Aviso de por que não há botões de decisão */
+.review-why {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f4efe7;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #5b5052;
 }

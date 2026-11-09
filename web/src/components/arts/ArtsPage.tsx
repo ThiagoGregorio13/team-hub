@@ -5,7 +5,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { CheckCircle2, Clock3, ImagePlus, Plus, RotateCcw } from "lucide-react";
 import { getGallery, isAdminSession, type GalleryArt, type TaskRow } from "../../api";
 import { prefersReducedMotion } from "../../motion";
-import { PaintBrush } from "./PaintBrush";
+import { ModernistMural } from "./ModernistMural";
 import { GalleryCard } from "./GalleryCard";
 import { ArtDetail } from "./ArtDetail";
 import { SendArtDialog } from "./SendArtDialog";
@@ -163,9 +163,8 @@ export function ArtsPage({ tasks, query, ready }: ArtsPageProps) {
     <div className="arts g-page" ref={rootRef}>
       <section className="g-hero" aria-labelledby="arts-title">
         <div className="g-hero__copy">
-          <span className="g-eyebrow">Ateliê da equipe</span>
-          <h1 id="arts-title">Onde as ideias ganham cor</h1>
-          <p>Envie as versões, receba o retorno da direção e acompanhe cada arte até a aprovação.</p>
+          <h1 id="arts-title">Revisão de artes</h1>
+          <p>Envie novas versões, acompanhe o retorno da direção e veja o que já foi aprovado.</p>
           <div className="g-hero__actions">
             <button type="button" className="g-button g-button--primary" onClick={() => openSend()}>
               <Plus size={17} aria-hidden="true" />
@@ -179,7 +178,7 @@ export function ArtsPage({ tasks, query, ready }: ArtsPageProps) {
           </div>
         </div>
         <div className="g-hero__art">
-          <PaintBrush />
+          <ModernistMural />
         </div>
       </section>
 
