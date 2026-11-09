@@ -24,7 +24,10 @@ import {
   MemberCount,
   getStatsByStatus,
   getStatsByMember,
+  getPendingReviews,
+  addNote,
 } from "./tools";
+import { properties } from "zod";
 
 const ai = new GoogleGenAI({});
 const MODEL = "gemini-3.1-flash-lite";
@@ -178,10 +181,20 @@ const searchNotesDeclaration: FunctionDeclaration = {
   },
 };
 
+const getPendingReviewsDeclaration: FunctionDeclaration = {
+  name: "get_pending_reviews",
+  description:
+    "Returns every art review that is still waiting for approval (status 'pending'), " +
+    "with the task title, the member who owns the task and the version number of the art. " +
+    "Use this for any question about arts or designs waiting for review or approval. " +
+    "Takes no arguments.",
+};
+
 const TOOLS = [
   getTasksByMemberDeclaration,
   getOverdueTasksDeclaration,
   searchNotesDeclaration,
+  getPendingReviewsDeclaration,
 ];
 
 async function runTool(name: string, args: Record<string, unknown>) {
@@ -196,7 +209,7 @@ async function runTool(name: string, args: Record<string, unknown>) {
     const query = args.query as string;
     return await searchNotes(query);
   }
-  return { error: `Unknown command: ${name}` };
+  if (name === "getPendingReviewsDeclaration") return await getPendingReviews();
 }
 
 app.get("/admin/users", requireAuth, requireAdmin, async (c) => {
@@ -606,6 +619,166 @@ app.patch("/tasks/:id/reviews/:reviewId", requireAdmin, async (c) => {
   }
 
   return c.json(rows[0]);
+});
+
+app.post(
+  "/tasks/:id/reviews/:reviewId/ai-analysis",
+  requireAdmin,
+  async (c) => {
+    const taskId = Number(c.req.param("id"));
+    const reviewId = Number(c.req.param("reviewId"));
+
+    const rows = await sql`
+SELECT r.id, r.art_url, t.title, AS task_title
+FROM task_reviews r 
+JOIN tasks t ON t.id  = t.tasks_id
+    WHERE r.id = ${reviewId} AND r.task_id = ${taskId}
+`;
+
+    const review = rows[0];
+    if (!review) {
+      return c.json({ error: "review not found" }, 404);
+    }
+    const history = await sql`
+    SELECT comment FROM task_reviews
+    WHERE task_id = ${taskId} AND id < ${reviewId} AND comment IS NOT NULL
+    ORDER BY id
+  `;
+
+    let image: { mimeType: string; data: string };
+    try {
+      const res = await fetch(review.art_url);
+      const mimeType = res.headers.get("content-type")?.split(";")[0] ?? "";
+      if (!res.ok || !mimeType.startsWith("image/")) {
+        return c.json({ error: "art_url is not a reachable image" }, 422);
+      }
+      const bytes = await res.arrayBuffer();
+      if (bytes.byteLength > 8 * 1024 * 1024) {
+        return c.json({ error: "image too large (max 8MB)" }, 413);
+      }
+      image = { mimeType, data: Buffer.from(bytes).toString("base64") };
+    } catch {
+      return c.json({ error: "could not download the image" }, 422);
+    }
+
+    const previous = history.length
+      ? history
+          .map((h: { comment: string }, i: number) => `${i + 1}. ${h.comment}`)
+          .join("\n")
+      : "Nenhum (esta é a primeira versão).";
+
+    const prompt = `You are an assistant who describes artwork for an art director. You do NOT evaluate or offer opinions; you simply provide an objective description of what is in the image.
+
+Task: "${review.task_title}"
+
+Adjustment requests from previous versions:
+${previous}
+
+Please provide:
+- summary: 1 or 2 sentences describing the artwork as a whole.
+- elements: the main visible elements (people, objects, shapes, logos).
+- colors: the predominant colors, ordered from most to least prominent (up to 6), including their names, approximate hex codes, and where they appear.
+- texts: all legible text in the image, transcribed exactly as it appears. Leave empty if there is none.
+- style: visual style and composition (e.g., flat illustration, photograph, centered, ample negative space).
+- request_check: for each previous request, describe what the image shows in relation to it, without judging whether it is good or bad. Leave empty if there are no requests.
+
+Respond in Brazilian Portuguese. Describe only what is visible; do not invent anything.`;
+    try {
+      const response = await ai.models.generateContent({
+        model: MODEL,
+        contents: [
+          {
+            role: "user",
+            parts: [{ inlineData: image }, { text: prompt }],
+          },
+        ],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              summary: { type: Type.STRING },
+              elements: { type: Type.ARRAY, items: { type: Type.STRING } },
+              colors: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    hex: { type: Type.STRING },
+                    where: { type: Type.STRING },
+                  },
+                  required: ["name", "hex", "where"],
+                },
+              },
+              texts: { type: Type.ARRAY, items: { type: Type.STRING } },
+              style: { type: Type.STRING },
+              request_check: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    request: { type: Type.STRING },
+                    observation: { type: Type.STRING },
+                  },
+                  required: ["request", "observation"],
+                },
+              },
+            },
+            required: [
+              "summary",
+              "elements",
+              "colors",
+              "texts",
+              "style",
+              "request_check",
+            ],
+          },
+        },
+      });
+
+      return c.json(JSON.parse(response.text ?? "{}"));
+    } catch (error) {
+      console.error("Error generating AI feedback", error);
+      return c.json({ error: "Failed to generate AI feedback" }, 503);
+    }
+  },
+);
+
+app.post("/notes", requireAuth, requireAdmin, async (c) => {
+  const body = await c.req.json();
+
+  if (typeof body.content !== "string") {
+    return c.json({ error: "notes must be text" }, 404);
+  }
+
+  const content = body.content.trim();
+
+  if (content.length < 8 || content.length > 1000) {
+    return c.json(
+      {
+        error:
+          "notes must be at least 8 characters and no more 1000 characters  ",
+      },
+      400,
+    );
+  }
+
+  let note;
+  try {
+    note = await addNote(content);
+ 
+  } catch (error) {
+    console.error("Error adding note", error);
+    return c.json({ error: "Failed to save note" }, 503);
+  }
+
+     if (!note) {
+      return c.json({error: "note already registered"}, 409)
+}
+
+  return c.json(note, 201);
+
 });
 
 export default app;

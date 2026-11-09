@@ -1,4 +1,4 @@
-import{sql} from "bun"
+import { sql } from "bun";
 import {
   GoogleGenAI,
   Type,
@@ -15,6 +15,17 @@ export type TaskRow = {
   status: string;
   due_date: string;
   member_name: string;
+};
+
+export type ReviewRow = {
+  id: number;
+  task_id: number;
+  task_title: string;
+  member_name: string;
+  status: string;
+  comment: string | null;
+  created_at: string;
+  version: number;
 };
 
 export type StatusCount = { status: string; total: number };
@@ -54,12 +65,7 @@ export async function getOverdueTasks(): Promise<TaskRow[]> {
 }
 
 export async function searchNotes(query: string) {
-  const response = await ai.models.embedContent({
-    model: "gemini-embedding-001",
-    contents: query,
-    config: { outputDimensionality: 768 },
-  });
-  const questionVector = JSON.stringify(response.embeddings![0].values!);
+  const questionVector = JSON.stringify(await embed(query));
 
   const rows = await sql`
     SELECT content, 1 - (embedding <=> ${questionVector}::vector) AS score
@@ -67,7 +73,6 @@ export async function searchNotes(query: string) {
     ORDER BY embedding <=> ${questionVector}::vector
     LIMIT 3
   `;
-
   return rows;
 }
 
@@ -81,6 +86,44 @@ export async function getStatsByStatus(): Promise<StatusCount[]> {
 export async function getStatsByMember(): Promise<MemberCount[]> {
   const rows: MemberCount[] = await sql`
    SELECT name, COUNT(tasks.member_id):: int AS total FROM members LEFT JOIN tasks  ON tasks.member_id = members.id GROUP BY members.name;
+  `;
+  return rows;
+}
+
+export async function getPendingReviews(): Promise<ReviewRow[]> {
+  const rows: ReviewRow[] = await sql`
+    SELECT * FROM (
+      SELECT r.id, r.task_id, t.title AS task_title, m.name AS member_name,
+             r.status, r.comment, r.created_at::text AS created_at,
+             ROW_NUMBER() OVER (PARTITION BY r.task_id ORDER BY r.id)::int AS version
+      FROM task_reviews r
+      JOIN tasks t ON t.id = r.task_id
+      LEFT JOIN members m ON m.id = t.member_id
+    ) sub
+    WHERE status = 'pending'
+    ORDER BY id
+  `;
+  return rows;
+}
+
+export async function embed(text: string): Promise<number[]> {
+ const response = await ai.models.embedContent({
+    model: "gemini-embedding-001",
+    contents: text,
+    config: { outputDimensionality: 768 },
+  });
+  return response.embeddings![0].values!;
+
+}
+
+export async function addNote(content: string) {
+  const questionVector = JSON.stringify(await embed(content));
+
+  const rows = await sql`
+   INSERT INTO notes (content, embedding) VALUES 
+ (${content}, ${questionVector}::vector) 
+   ON CONFLICT (content) DO NOTHING
+   RETURNING id, content
   `;
   return rows;
 }
