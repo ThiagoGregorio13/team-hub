@@ -1,6 +1,7 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import {
   deleteTask,
+  displayName,
   getDeliveryTime,
   getStatsByMember,
   getTasks,
@@ -13,14 +14,15 @@ import {
   type Status,
   type TaskRow,
 } from "./api";
-import { Sidebar } from "./components/Sidebar";
+import { Sidebar, type View } from "./components/Sidebar";
 import { Header } from "./components/Header";
 import { StatCards } from "./components/StatCards";
+import { Stage } from "./components/Stage";
+import { TeamPage } from "./components/TeamPage";
 import { WorkloadChart } from "./components/WorkloadChart";
 import { StatusDonut } from "./components/StatusDonut";
 import { TaskTable, type TaskFilter } from "./components/TaskTable";
 import { Upcoming } from "./components/Upcoming";
-import { AiCard } from "./components/AiCard";
 import { Timeline } from "./components/Timeline";
 import { ArtsPage } from "./components/arts/ArtsPage";
 import { PaintSplash } from "./components/arts/PaintSplash";
@@ -28,6 +30,7 @@ import { prefersReducedMotion } from "./motion";
 import { TaskDrawer } from "./components/TaskDrawer";
 import { AskTeam } from "./components/AskTeam";
 import "./App.css";
+import "./backstage.css";
 import { NewTaskForm } from "./components/NewTaskForm";
 import { RegisterDialog } from "./components/RegisterDialog";
 import {DialogCancel } from "./components/ConfirmDialog"
@@ -38,11 +41,25 @@ type DashboardData = {
   delivery: DeliveryTime;
 };
 
-type View = "dashboard" | "arts";
+// Cada página mora no hash da URL: assim o botão voltar e o F5 funcionam
+const VIEWS: Record<string, View> = {
+  "#overview": "overview",
+  "#tasks": "tasks",
+  "#team": "team",
+  "#schedule": "schedule",
+  "#artes": "arts",
+};
 
-// "#artes" abre a página de artes; qualquer outra âncora é uma seção do dashboard
+const TITLES: Record<View, string | null> = {
+  overview: "Visão geral",
+  tasks: "Tarefas",
+  team: "Equipe",
+  schedule: "Cronograma",
+  arts: null, // Artes tem o próprio título grande
+};
+
 function viewFromHash(): View {
-  return window.location.hash === "#artes" ? "arts" : "dashboard";
+  return VIEWS[window.location.hash] ?? "overview";
 }
 
 // "closed" = fechado; "chat" = aberto para perguntar; "summary" = já abre gerando o resumo
@@ -79,13 +96,8 @@ function App() {
   // O botão voltar do navegador também troca de página, porque a página mora no hash
   useEffect(() => {
     function handleHash() {
-      const next = viewFromHash();
-      setView(next);
-      // Vindo de Artes para uma seção do dashboard: espera a seção existir e rola até ela
-      requestAnimationFrame(() => {
-        if (next === "arts") window.scrollTo({ top: 0 });
-        else document.querySelector(window.location.hash || "#overview")?.scrollIntoView({ block: "start" });
-      });
+      setView(viewFromHash());
+      window.scrollTo({ top: 0 }); // página nova começa do topo
     }
     window.addEventListener("hashchange", handleHash);
     return () => window.removeEventListener("hashchange", handleHash);
@@ -158,16 +170,17 @@ setTaskToDelete(id);
     loadData();
    }
 
-  // O sino do header leva direto para a aba "Atrasadas" da tabela
+  // O sino do header leva direto para a aba "Atrasadas" da página de tarefas
   function showLate() {
     setFilter("late");
-    if (view === "arts") {
-      window.location.hash = "#tasks";
-      return;
-    }
-    document
-      .getElementById("tasks")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.location.hash = "#tasks";
+  }
+
+  // Da página Equipe: abre Tarefas já buscando pelo nome da pessoa
+  function showPerson(name: string) {
+    setQuery(displayName(name));
+    setFilter("all");
+    window.location.hash = "#tasks";
   }
   const today = todayLocal();
   const openTask = data?.tasks.find((t) => t.id === openTaskId) ?? null;
@@ -177,7 +190,7 @@ setTaskToDelete(id);
 
   return (
     <div className="layout">
-      <Sidebar onAsk={() => setAsk("chat")} view={view} onOpenArts={openArts} />
+      <Sidebar view={view} onOpenArts={openArts} />
 
       <div className="main">
         <Header
@@ -187,70 +200,77 @@ setTaskToDelete(id);
           onShowLate={showLate}
           onAsk={() => setAsk("chat")}
           onCreateUser={isAdminSession() ? () => setRegisterOpen(true) : undefined}
-          title={view === "arts" ? null : "Dashboard"}
+          title={TITLES[view]}
+          search={view === "tasks" || view === "arts"}
           searchLabel={view === "arts" ? "Buscar arte ou pessoa..." : undefined}
         />
 
         {registerOpen && <RegisterDialog onClose={() => setRegisterOpen(false)} />}
 
-        {view === "arts" ? (
-          <main className="content content--arts">
-            {error && <p className="notice">{error}</p>}
-            {!error && !data && <Skeleton />}
-            {data && <ArtsPage tasks={data.tasks} query={query} ready={!covered} />}
-          </main>
-        ) : (
-          <main className="content" id="overview">
-            {error && <p className="notice">{error}</p>}
-            {!error && !data && <Skeleton />}
-            {data && (
-              <>
-                <StatCards
-                  tasks={data.tasks}
-                  members={data.members}
-                  today={today}
-                />
+        {/* key={view}: cada página nova monta do zero e ganha a entrada suave do CSS */}
+        <main className={`content content--${view}`} key={view}>
+          {error && <p className="notice">{error}</p>}
+          {!error && !data && <Skeleton />}
 
-                <div className="grid grid--wide-left">
-                  <WorkloadChart members={data.members} tasks={data.tasks} />
-                  <StatusDonut tasks={data.tasks} delivery={data.delivery} />
-                </div>
+          {data && view === "overview" && (
+            <>
+              <Stage
+                tasks={data.tasks}
+                members={data.members}
+                today={today}
+                onSummary={() => setAsk("summary")}
+                onNewTask={() => setNewTaskOpen(true)}
+                onOpenTask={setOpenTaskId}
+              />
+              <StatCards tasks={data.tasks} members={data.members} today={today} />
+              <div className="grid grid--wide-left">
+                <Upcoming tasks={data.tasks} members={data.members} today={today} onOpenTask={setOpenTaskId} />
+                <StatusDonut tasks={data.tasks} delivery={data.delivery} />
+              </div>
+              <WorkloadChart members={data.members} tasks={data.tasks} height={200} />
+            </>
+          )}
 
-                <div className="grid grid--wide-left">
-                  <TaskTable
-                    tasks={data.tasks}
-                    members={data.members}
-                    today={today}
-                    query={query}
-                    filter={filter}
-                    onFilterChange={setFilter}
-                    onStatusChange={handleStatusChange}
-                    onOpenTask={setOpenTaskId}
-                    onNewTask={() => setNewTaskOpen(true)}
-                    onDeleteTask={handleDeleteTask}
-                  />
-                  <div className="stack">
-                    <Upcoming
-                      tasks={data.tasks}
-                      members={data.members}
-                      today={today}
-                      onOpenTask={setOpenTaskId}
-                    />
-                    <AiCard onAsk={() => setAsk("summary")} />
-                  </div>
-                </div>
+          {data && view === "tasks" && (
+            <TaskTable
+              tasks={data.tasks}
+              members={data.members}
+              today={today}
+              query={query}
+              filter={filter}
+              onFilterChange={setFilter}
+              onStatusChange={handleStatusChange}
+              onOpenTask={setOpenTaskId}
+              onNewTask={() => setNewTaskOpen(true)}
+              onDeleteTask={handleDeleteTask}
+            />
+          )}
 
-                <Timeline
-                  tasks={data.tasks}
-                  members={data.members}
-                  today={today}
-                  onOpenTask={setOpenTaskId}
-                  onNewTask={() => setNewTaskOpen(true)}
-                />
-              </>
-            )}
-          </main>
-        )}
+          {data && view === "team" && (
+            <>
+              <TeamPage
+                tasks={data.tasks}
+                members={data.members}
+                today={today}
+                onOpenTask={setOpenTaskId}
+                onShowPerson={showPerson}
+              />
+              <WorkloadChart members={data.members} tasks={data.tasks} height={240} />
+            </>
+          )}
+
+          {data && view === "schedule" && (
+            <Timeline
+              tasks={data.tasks}
+              members={data.members}
+              today={today}
+              onOpenTask={setOpenTaskId}
+              onNewTask={() => setNewTaskOpen(true)}
+            />
+          )}
+
+          {data && view === "arts" && <ArtsPage tasks={data.tasks} query={query} ready={!covered} />}
+        </main>
       </div>
 
       <TaskDrawer

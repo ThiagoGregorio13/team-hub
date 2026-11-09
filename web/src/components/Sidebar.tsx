@@ -1,66 +1,69 @@
 import type { MouseEvent } from "react";
-import { CalendarRange, LayoutGrid, ListChecks, Palette, Sparkles, Users } from "lucide-react";
+import { CalendarRange, LayoutGrid, ListChecks, LogOut, Palette, Users } from "lucide-react";
+import { clearToken } from "../api";
+
+export type View = "overview" | "tasks" | "team" | "schedule" | "arts";
 
 type SidebarProps = {
-  onAsk: () => void;
-  view: "dashboard" | "arts";
+  view: View;
   // Artes abre com a transição de tinta; quem decide é o App
   onOpenArts?: (event: MouseEvent<HTMLAnchorElement>) => void;
 };
 
-// Cada item leva até uma seção da página (âncora pelo id)
-const NAV = [
-  { href: "#overview", label: "Visão geral", icon: LayoutGrid },
-  { href: "#tasks", label: "Tarefas", icon: ListChecks },
-  { href: "#team", label: "Equipe", icon: Users },
-  { href: "#schedule", label: "Cronograma", icon: CalendarRange },
-  { href: "#artes", label: "Artes", icon: Palette },
+// Cada item é uma página de verdade: o hash da URL diz qual está aberta
+const NAV: { view: View; href: string; label: string; icon: typeof LayoutGrid }[] = [
+  { view: "overview", href: "#overview", label: "Visão geral", icon: LayoutGrid },
+  { view: "tasks", href: "#tasks", label: "Tarefas", icon: ListChecks },
+  { view: "team", href: "#team", label: "Equipe", icon: Users },
+  { view: "schedule", href: "#schedule", label: "Cronograma", icon: CalendarRange },
+  { view: "arts", href: "#artes", label: "Artes", icon: Palette },
 ];
 
-export function Sidebar({ onAsk, view, onOpenArts }: SidebarProps) {
-  // Artes é uma página à parte; no dashboard, "Visão geral" fica marcada
-  const active = (href: string, index: number) =>
-    view === "arts" ? href === "#artes" : index === 0;
+function logout() {
+  clearToken();
+  window.location.hash = "";
+  window.location.reload();
+}
 
+// A coxia: escura como o palco do login, com um holofote no item aberto
+export function Sidebar({ view, onOpenArts }: SidebarProps) {
   return (
     <aside className="sidebar">
-      <div className="sidebar__brand">
+      <a className="sidebar__brand" href="#overview" aria-label="team hub, ir para a visão geral">
         <span className="logo" aria-hidden="true">
           <span />
           <span />
           <span />
           <span />
         </span>
-        TEAM
-      </div>
+        team hub
+      </a>
 
-      <p className="sidebar__label">Menu</p>
-      <nav>
+      <nav aria-label="Principal">
         <ul className="nav">
-          {NAV.map(({ href, label, icon: Icon }, index) => (
-            <li key={href}>
-              <a
-                className={`nav__item${active(href, index) ? " is-active" : ""}`}
-                href={href}
-                aria-current={active(href, index) ? "page" : undefined}
-                onClick={href === "#artes" ? onOpenArts : undefined}
-              >
-                <Icon size={18} aria-hidden="true" />
-                {label}
-              </a>
-            </li>
-          ))}
+          {NAV.map(({ view: target, href, label, icon: Icon }) => {
+            const active = view === target;
+            return (
+              <li key={href}>
+                <a
+                  className={`nav__item${active ? " is-active" : ""}`}
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  onClick={target === "arts" ? onOpenArts : undefined}
+                >
+                  <Icon size={18} aria-hidden="true" />
+                  <span>{label}</span>
+                </a>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 
-      <div className="promo">
-        <span className="promo__icon" aria-hidden="true">
-          <Sparkles size={18} />
-        </span>
-        <strong>Assistente TEAM</strong>
-        <p>Pergunte sobre prazos, carga de trabalho e atrasos do time.</p>
-        <button className="promo__button" onClick={onAsk}>
-          Abrir assistente
+      <div className="sidebar__foot">
+        <button className="sidebar__logout" onClick={logout}>
+          <LogOut size={16} aria-hidden="true" />
+          Sair
         </button>
       </div>
     </aside>

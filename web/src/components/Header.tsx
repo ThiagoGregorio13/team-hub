@@ -10,6 +10,8 @@ type HeaderProps = {
   // null: a página tem o próprio título grande (ex.: Artes)
   title?: string | null;
   searchLabel?: string;
+  // false: a página não tem lista para filtrar (ex.: visão geral)
+  search?: boolean;
 };
 
 // Mostra "⌘K" no Mac e "Ctrl K" no resto
@@ -24,6 +26,7 @@ export function Header({
   onCreateUser,
   title = "Dashboard",
   searchLabel = "Buscar tarefa ou pessoa...",
+  search = true,
 }: HeaderProps) {
   const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
 
@@ -34,7 +37,8 @@ export function Header({
         <p className="header__date">{today}</p>
       </div>
 
-      {/* A busca filtra a tabela de tarefas */}
+      {/* A busca filtra a lista da página (tarefas ou artes) */}
+      {search && (
       <label className="search">
         <Search size={17} aria-hidden="true" />
         <input
@@ -45,6 +49,7 @@ export function Header({
           aria-label={searchLabel.replace("...", "")}
         />
       </label>
+      )}
 
       <div className="header__actions">
         {onCreateUser && (

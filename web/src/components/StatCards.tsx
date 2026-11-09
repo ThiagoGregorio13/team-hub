@@ -1,6 +1,5 @@
-import type { ReactNode } from "react";
-import { AlertTriangle, CheckCircle2, Layers, Timer } from "lucide-react";
 import { isOverdue, percent, plural, type MemberCount, type TaskRow } from "../api";
+import { useCountUp } from "../useCountUp";
 
 type StatCardsProps = {
   tasks: TaskRow[];
@@ -8,6 +7,7 @@ type StatCardsProps = {
   today: string;
 };
 
+// Uma faixa só, dividida em quatro: os números são o destaque, sem ícone nem card para cada um
 export function StatCards({ tasks, members, today }: StatCardsProps) {
   const total = tasks.length;
   const inProgress = tasks.filter((t) => t.status === "in_progress").length;
@@ -15,69 +15,44 @@ export function StatCards({ tasks, members, today }: StatCardsProps) {
   const late = tasks.filter((t) => isOverdue(t, today)).length;
 
   return (
-    <section className="stats" aria-label="Indicadores">
-      <StatCard
-        tone="primary"
-        icon={<Layers size={20} />}
-        label="Total de tarefas"
-        value={total}
-        foot={`Distribuídas entre ${plural(members.length, "membro")}`}
-      />
-      <StatCard
-        tone="sage"
-        icon={<Timer size={20} />}
-        label="Em andamento"
-        value={inProgress}
-        progress={percent(inProgress, total)}
-        foot={`${percent(inProgress, total)}% do total`}
-      />
-      <StatCard
-        tone="primary"
-        icon={<CheckCircle2 size={20} />}
-        label="Concluídas"
-        value={done}
-        progress={percent(done, total)}
-        foot={`${percent(done, total)}% do total`}
-      />
-      <StatCard
-        tone="alert"
-        icon={<AlertTriangle size={20} />}
+    <section className="strip" aria-label="Indicadores">
+      <Stat label="Tarefas" value={total} foot={`entre ${plural(members.length, "pessoa")}`} />
+      <Stat label="Em andamento" value={inProgress} share={percent(inProgress, total)} tone="sage" />
+      <Stat label="Concluídas" value={done} share={percent(done, total)} tone="brand" />
+      <Stat
         label="Atrasadas"
         value={late}
-        foot={late === 0 ? "Tudo dentro do prazo" : "Precisam de atenção"}
-        badge={late === 0 ? { text: "Em dia", tone: "primary" } : { text: "Atenção", tone: "alert" }}
+        share={percent(late, total)}
+        tone="alert"
+        foot={late === 0 ? "tudo dentro do prazo" : undefined}
+        alert={late > 0}
       />
     </section>
   );
 }
 
-type StatCardProps = {
-  tone: "primary" | "sage" | "alert";
-  icon: ReactNode;
+type StatProps = {
   label: string;
   value: number;
-  foot: string;
-  progress?: number;
-  badge?: { text: string; tone: "primary" | "alert" };
+  // parte do total, em %: vira a barrinha e o texto de baixo
+  share?: number;
+  foot?: string;
+  tone?: "sage" | "brand" | "alert";
+  alert?: boolean;
 };
 
-function StatCard({ tone, icon, label, value, foot, progress, badge }: StatCardProps) {
+function Stat({ label, value, share, foot, tone, alert }: StatProps) {
+  const shown = useCountUp(value);
   return (
-    <article className="card stat">
-      <div className="stat__top">
-        <span className={`stat__icon stat__icon--${tone}`} aria-hidden="true">
-          {icon}
+    <div className={`strip__cell${alert ? " is-alert" : ""}`}>
+      <span className="strip__label">{label}</span>
+      <strong className="strip__value">{shown}</strong>
+      {share !== undefined && (
+        <span className="strip__meter" aria-hidden="true">
+          <span className={`strip__fill strip__fill--${tone}`} style={{ width: `${share}%` }} />
         </span>
-        {badge && <span className={`badge badge--${badge.tone}`}>{badge.text}</span>}
-      </div>
-      <p className="stat__label">{label}</p>
-      <strong className="stat__value">{value}</strong>
-      {progress !== undefined && (
-        <div className="meter" role="presentation">
-          <span className={`meter__fill meter__fill--${tone}`} style={{ width: `${progress}%` }} />
-        </div>
       )}
-      <p className="stat__foot">{foot}</p>
-    </article>
+      <span className="strip__foot">{foot ?? `${share}% do total`}</span>
+    </div>
   );
 }
