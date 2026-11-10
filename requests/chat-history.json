@@ -1,0 +1,7 @@
+{
+  "question": "e as da Alice?",
+  "history": [
+    { "role": "user", "text": "quem tem tarefa atrasada?" },
+    { "role": "model", "text": "O Bruno tem 1 tarefa atrasada." }
+  ]
+}

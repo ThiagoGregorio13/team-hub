@@ -1,29 +1,29 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowUp, Search } from "lucide-react";
-import { askTeam, getAiSummary } from "../api";
+import { ArrowUp, RotateCcw, Search } from "lucide-react";
+import { askTeam, getAiSummary, type ChatTurn } from "../api";
 import { prefersReducedMotion } from "../motion";
 
 type AskTeamProps = {
   open: boolean;
-  // true quando aberto pelo botão "Gerar análise": já começa pedindo o resumo
+  // true quando aberto pelo botão "Resumo do dia": já começa pedindo o resumo
   startWithSummary: boolean;
   onClose: () => void;
 };
 
-type AskState =
-  | { kind: "idle" }
-  | { kind: "loading"; question: string }
-  | { kind: "done"; question: string; answer: string }
-  | { kind: "error"; question: string };
+// failed: a pergunta que ficou sem resposta (não vai para o histórico)
+type Message = ChatTurn & { failed?: boolean };
 
 const SUMMARY = "Resumo do time agora";
-const SUGGESTIONS = [SUMMARY, "Quem tem tarefas atrasadas?", "O que o Pedro está fazendo?"];
+const SUGGESTIONS = [SUMMARY, "Quem tem tarefas atrasadas?", "O que vence nesta semana?"];
 
-// Barra de comando com IA: "Resumo" usa a rota /ai/summary; o resto vai para /ai/chat (com tool calling)
+// Conversa com a IA. "Resumo" usa a rota /ai/summary; o resto vai para /ai/chat com o histórico,
+// para a IA entender perguntas como "e as da Alice?" depois de "quem tem tarefa atrasada?".
 export function AskTeam({ open, startWithSummary, onClose }: AskTeamProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const [question, setQuestion] = useState("");
-  const [state, setState] = useState<AskState>({ kind: "idle" });
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -36,17 +36,31 @@ export function AskTeam({ open, startWithSummary, onClose }: AskTeamProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só reage a abrir/fechar
   }, [open]);
 
+  // Mensagem nova: rola até o fim da conversa
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (body) body.scrollTo({ top: body.scrollHeight, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  }, [messages, loading]);
+
   async function ask(text: string) {
     const q = text.trim();
-    if (!q || state.kind === "loading") return;
+    if (!q || loading) return;
+
+    // O histórico é a conversa até agora, sem as perguntas que falharam
+    const history: ChatTurn[] = messages.filter((m) => !m.failed).map(({ role, text }) => ({ role, text }));
+
     setQuestion("");
-    setState({ kind: "loading", question: q });
+    setMessages((current) => [...current, { role: "user", text: q }]);
+    setLoading(true);
     try {
-      const answer = q === SUMMARY ? (await getAiSummary()).summary : (await askTeam(q)).text;
-      setState({ kind: "done", question: q, answer });
+      const answer = q === SUMMARY ? (await getAiSummary()).summary : (await askTeam(q, history)).text;
+      setMessages((current) => [...current, { role: "model", text: answer }]);
     } catch (err) {
       console.error(err);
-      setState({ kind: "error", question: q });
+      // Marca a pergunta como falha: ela some do histórico e a tela mostra o aviso
+      setMessages((current) => current.map((m, i) => (i === current.length - 1 ? { ...m, failed: true } : m)));
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -54,6 +68,8 @@ export function AskTeam({ open, startWithSummary, onClose }: AskTeamProps) {
     event.preventDefault();
     ask(question);
   }
+
+  const lastAnswer = messages.length - 1;
 
   return (
     <dialog
@@ -69,17 +85,17 @@ export function AskTeam({ open, startWithSummary, onClose }: AskTeamProps) {
           className="ask__input"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Pergunte qualquer coisa sobre o time…"
+          placeholder={messages.length ? "Continue a conversa…" : "Pergunte qualquer coisa sobre o time…"}
           aria-label="Sua pergunta"
           autoFocus
         />
-        <button className="ask__send" type="submit" aria-label="Perguntar" disabled={!question.trim()}>
+        <button className="ask__send" type="submit" aria-label="Perguntar" disabled={!question.trim() || loading}>
           <ArrowUp size={16} />
         </button>
       </form>
 
-      <div className="ask__body" aria-live="polite">
-        {state.kind === "idle" && (
+      <div className="ask__body" ref={bodyRef} aria-live="polite">
+        {messages.length === 0 && (
           <div className="ask__suggestions">
             <p className="ask__hint">Experimente:</p>
             {SUGGESTIONS.map((s) => (
@@ -90,16 +106,28 @@ export function AskTeam({ open, startWithSummary, onClose }: AskTeamProps) {
           </div>
         )}
 
-        {state.kind !== "idle" && <p className="ask__question">{state.question}</p>}
-        {state.kind === "loading" && (
+        {messages.map((message, i) =>
+          message.role === "user" ? (
+            <div key={i} className="ask__turn">
+              <p className="ask__question">{message.text}</p>
+              {message.failed && (
+                <p className="ask__error">A IA não respondeu agora (pode estar sobrecarregada ou sem cota). Tente de novo em instantes.</p>
+              )}
+            </div>
+          ) : i === lastAnswer ? (
+            // Só a resposta mais nova aparece "sendo escrita"; as antigas já ficam prontas
+            <Typewriter key={i} text={message.text} />
+          ) : (
+            <p key={i} className="ask__answer">
+              {message.text}
+            </p>
+          ),
+        )}
+
+        {loading && (
           <p className="ask__thinking">
             <span /> <span /> <span /> Lendo as tarefas do time
           </p>
-        )}
-        {/* key: cada resposta nova recomeça a "digitação" do zero */}
-        {state.kind === "done" && <Typewriter key={state.answer} text={state.answer} />}
-        {state.kind === "error" && (
-          <p className="ask__error">A IA não respondeu agora (pode estar sobrecarregada ou sem cota). Tente de novo em instantes.</p>
         )}
       </div>
 
@@ -110,6 +138,12 @@ export function AskTeam({ open, startWithSummary, onClose }: AskTeamProps) {
         <span>
           <kbd>Esc</kbd> fecha
         </span>
+        {messages.length > 0 && (
+          <button className="ask__reset" onClick={() => setMessages([])} disabled={loading}>
+            <RotateCcw size={13} aria-hidden="true" />
+            Nova conversa
+          </button>
+        )}
       </footer>
     </dialog>
   );

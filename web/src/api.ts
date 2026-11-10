@@ -132,8 +132,12 @@ export const getDeliveryTime = () => get<DeliveryTime>("/stats/delivery-time");
 export const patchStatus = (id: number, status: Status) =>
   patch<{ id: number; status: Status }>(`/tasks/${id}`, { status });
 export const deleteTask = (id: number) => del(`/tasks/${id}`);
-export const askTeam = (question: string) =>
-  post<ChatAnswer>("/ai/chat", { question });
+// Uma mensagem da conversa: "user" é quem pergunta, "model" é a IA (o nome que o Gemini usa)
+export type ChatTurn = { role: "user" | "model"; text: string };
+
+// A IA não lembra de nada sozinha: a cada pergunta, a conversa anterior vai junto no "history"
+export const askTeam = (question: string, history: ChatTurn[] = []) =>
+  post<ChatAnswer>("/ai/chat", { question, history });
 export const getMembers = () => get<Member[]>("/members");
 export const getChecklist = (taskId: number) =>
   get<ChecklistItem[]>(`/tasks/${taskId}/checklist`);

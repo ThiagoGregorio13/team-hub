@@ -28,7 +28,7 @@ import {
   addNote,
   previewNotes,
 } from "./tools";
-import { properties } from "zod";
+import { properties, string } from "zod";
 
 const ai = new GoogleGenAI({});
 const MODEL = "gemini-3.1-flash-lite";
@@ -223,44 +223,64 @@ app.get("/me", requireAuth, (c) => c.json(c.get("user")));
 app.post("/ai/chat", async (c) => {
   const body = await c.req.json();
 
+  if (typeof body.question !== "string" || !body.question.trim()) {
+    return c.json({ error: "question is required" }, 400);
+  }
+
+  const question = body.question.trim();
+
   try {
+    const config = {
+      systemInstruction: `Você é o assistente do team hub. Hoje é ${new Date().toLocaleDateString(
+        "pt-BR",
+        {
+          timeZone: "America/Sao_Paulo",
+          dateStyle: "full",
+        },
+      )}.
+Para qualquer pergunta sobre tarefas, pessoas, prazos, artes ou combinados do time, use SEMPRE as ferramentas antes de responder. Nunca responda sobre dados do time sem consultá-las.
+Responda em português do Brasil, em poucas linhas.`,
+      tools: [{ functionDeclarations: TOOLS }],
+    };
+    const history: Content[] = (Array.isArray(body.history) ? body.history : [])
+      .filter(
+        (item: any) =>
+          (item.role === "user" || item.role === "model") &&
+          typeof item.text === "string",
+      )
+      .slice(-10)
+      .map((item: any) => ({
+        role: item.role,
+        parts: [{ text: item.text.slice(0, 2000) }],
+      }));
     const contents: Content[] = [
-      { role: "user", parts: [{ text: body.question }] },
+      ...history,
+      { role: "user", parts: [{ text: question }] },
     ];
     const MAX_STEP = 5;
     let steps = 0;
     let response = await ai.models.generateContent({
       model: MODEL,
       contents,
-      config: {
-        tools: [
-          {
-            functionDeclarations: TOOLS,
-          },
-        ],
-      },
+      config,
     });
     while (response.functionCalls && steps < MAX_STEP) {
       contents.push(response.candidates![0].content!);
+
       for (const call of response.functionCalls) {
         const data = await runTool(call.name ?? "", call.args ?? {});
         contents.push({
           role: "user",
-          parts: [
-            {
-              functionResponse: {
-                name: call.name,
-                response: { result: data },
-              },
-            },
-          ],
+          parts: [{ functionResponse: { name: call.name, response: { result: data } } }],
         });
       }
+
       response = await ai.models.generateContent({
         model: MODEL,
         contents,
-        config: { tools: [{ functionDeclarations: TOOLS }] },
+        config,
       });
+
       steps++;
     }
 
@@ -312,9 +332,13 @@ app.patch("/tasks/:id", async (c) => {
   if (!values.includes(body.status)) {
     return c.json({ error: "invalid status" }, 400);
   }
+  // COALESCE: se a tarefa já estava concluída, mantém a data em que foi concluída da primeira vez
   const rows = await sql`
-  UPDATE tasks SET status = ${body.status}, completed_at = CASE WHEN ${body.status} = 'done' THEN now() ELSE NULL END WHERE id = ${id}
+  UPDATE tasks SET status = ${body.status}, completed_at = CASE WHEN ${body.status} = 'done' THEN COALESCE(completed_at, now()) ELSE NULL END WHERE id = ${id}
   RETURNING  id, title, status, member_id, completed_at`;
+  if (rows.length === 0) {
+    return c.json({ error: "task not found" }, 404);
+  }
   return c.json(rows[0]);
 });
 
