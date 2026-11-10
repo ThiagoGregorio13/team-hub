@@ -33,7 +33,7 @@ export function Timeline({ tasks, members, today, onOpenTask, onNewTask }: Timel
   const toX = (day: number) => ((day - start) / (end - start)) * 100;
 
   return (
-    <section className="card" id="schedule" aria-labelledby="timeline-title">
+    <section className="card" aria-labelledby="timeline-title">
       <header className="card__header">
         <div>
           <h2 id="timeline-title">Cronograma</h2>

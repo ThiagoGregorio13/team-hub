@@ -7,32 +7,49 @@ type HeaderProps = {
   onShowLate: () => void;
   onAsk: () => void;
   onCreateUser?: () => void;
+  // null: a página tem o próprio título grande (ex.: Artes)
+  title?: string | null;
+  searchLabel?: string;
+  // false: a página não tem lista para filtrar (ex.: visão geral)
+  search?: boolean;
 };
 
 // Mostra "⌘K" no Mac e "Ctrl K" no resto
 const SHORTCUT = /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘K" : "Ctrl K";
 
-export function Header({ query, onQueryChange, lateCount, onShowLate, onAsk, onCreateUser }: HeaderProps) {
+export function Header({
+  query,
+  onQueryChange,
+  lateCount,
+  onShowLate,
+  onAsk,
+  onCreateUser,
+  title = "Dashboard",
+  searchLabel = "Buscar tarefa ou pessoa...",
+  search = true,
+}: HeaderProps) {
   const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
 
   return (
     <header className="header">
       <div className="header__title">
-        <h1>Dashboard</h1>
+        {title && <h1>{title}</h1>}
         <p className="header__date">{today}</p>
       </div>
 
-      {/* A busca filtra a tabela de tarefas */}
+      {/* A busca filtra a lista da página (tarefas ou artes) */}
+      {search && (
       <label className="search">
         <Search size={17} aria-hidden="true" />
         <input
           type="search"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="Buscar tarefa ou pessoa..."
-          aria-label="Buscar tarefa ou pessoa"
+          placeholder={searchLabel}
+          aria-label={searchLabel.replace("...", "")}
         />
       </label>
+      )}
 
       <div className="header__actions">
         {onCreateUser && (

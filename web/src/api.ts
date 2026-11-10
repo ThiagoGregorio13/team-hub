@@ -1,5 +1,15 @@
 // Mesmos formatos que a API devolve (ver team-hub/src/index.ts)
 export type Status = "pending" | "in_progress" | "done";
+export type ReviewStatus = "pending" | "approved" | "changes_requested";
+
+export type TaskReview = {
+  id: number;
+  art_url: string;
+  status: ReviewStatus;
+  comment: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+};
 
 export type TaskRow = {
   id: number;
@@ -28,6 +38,15 @@ export type ChecklistItem = {
   done: boolean;
 };
 
+export type ArtAnalysis = {
+  colors:{name:string, hex:string, where:string}[];
+  request_check:{request:string, observation:string}[];
+  summary:string;
+  texts:string[];
+  style:string;
+  elements:string[]
+}
+
 // Em dev o Vite repassa "/api" para localhost:3000 (vite.config.ts)
 const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -40,6 +59,7 @@ export class ApiError extends Error {
     this.status = status;
   }
 }
+
 
 function authHeaders(): Record<string, string> {
   const token = getToken();
@@ -70,7 +90,7 @@ async function patch<T>(path: string, body: unknown): Promise<T> {
   });
   handleUnauthorized(res);
   if (!res.ok) {
-    throw new Error(`PATCH ${path} falhou com status ${res.status}`);
+    throw new ApiError(`PATCH ${path} falhou com status ${res.status}`, res.status);
   }
   return res.json();
 }
@@ -127,6 +147,18 @@ export const createTask = (
   member_id: number,
   due_date: string,
 ) => post<{ id: number }>("/tasks", { title, member_id, due_date });
+
+export const getReviews = (taskId: number) =>
+  get<TaskReview[]>(`/tasks/${taskId}/reviews`);
+
+// Uma arte na galeria: a revisão mais o nome da tarefa e o número da versão
+export type GalleryArt = TaskReview & {
+  task_id: number;
+  task_title: string;
+  version: number;
+};
+
+export const getGallery = () => get<GalleryArt[]>("/reviews");
 
 export type LoginResponse = {
   id: number;
@@ -240,3 +272,16 @@ export const toggleChecklistItem = (
 
 export const deleteChecklistItem = (taskId: number, itemId: number) =>
   del(`/tasks/${taskId}/checklist/${itemId}`);
+export const submitReview = (taskId: number, artUrl: string) =>
+  post<TaskReview>(`/tasks/${taskId}/reviews`, { art_url: artUrl });
+
+export const decideReview = (
+  taskId: number,
+  reviewId: number,
+  status: "approved" | "changes_requested",
+  comment?: string,
+) => patch<TaskReview>(`/tasks/${taskId}/reviews/${reviewId}`, { status, comment });
+
+export const analyzeArt = (taskId: number, reviewId: number,
+) =>
+  post<ArtAnalysis>(`/tasks/${taskId}/reviews/${reviewId}/ai-analysis`, {});

@@ -6,12 +6,12 @@ import { Avatar } from "./Avatar";
 type WorkloadChartProps = {
   members: MemberCount[];
   tasks: TaskRow[];
+  // altura da área das barras, em px (menor na visão geral, maior na página Equipe)
+  height?: number;
 };
 
-const CHART_HEIGHT = 330;
-
 // Barras verticais empilhadas: uma por membro, cada pedaço é um status
-export function WorkloadChart({ members, tasks }: WorkloadChartProps) {
+export function WorkloadChart({ members, tasks, height = 330 }: WorkloadChartProps) {
   const [hovered, setHovered] = useState<string | null>(null);
 
   const rows = members.map((member) => {
@@ -27,7 +27,7 @@ export function WorkloadChart({ members, tasks }: WorkloadChartProps) {
   const ticks = [max, (max * 3) / 4, max / 2, max / 4, 0];
 
   return (
-    <section className="card chart-card" id="team" aria-labelledby="workload-title">
+    <section className="card chart-card" aria-labelledby="workload-title">
       <header className="card__header">
         <div>
           <h2 id="workload-title">Carga por membro</h2>
@@ -50,7 +50,7 @@ export function WorkloadChart({ members, tasks }: WorkloadChartProps) {
           ))}
         </div>
 
-        <div className="bars__plot" style={{ height: CHART_HEIGHT }}>
+        <div className="bars__plot" style={{ height }}>
           {/* Linhas de grade atrás das barras */}
           {ticks.map((t) => (
             <span key={t} className="bars__grid" style={{ bottom: `${(t / max) * 100}%` }} aria-hidden="true" />

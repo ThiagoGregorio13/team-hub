@@ -66,7 +66,6 @@ export function TaskTable({
   return (
     <section
       className="card table-card"
-      id="tasks"
       aria-labelledby="tasks-title"
     >
       <header className="card__header">
@@ -127,7 +126,7 @@ export function TaskTable({
             {visible.map((task) => {
               const late = isOverdue(task, today);
               return (
-                <tr key={task.id} onClick={() => onOpenTask(task.id)}>
+                <tr key={task.id} className={late ? "is-late" : undefined} onClick={() => onOpenTask(task.id)}>
                   <td>
                     <span className="table__task">
                       <span className="table__id">#{task.id}</span>

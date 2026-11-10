@@ -28,7 +28,7 @@ export function Upcoming({ tasks, members, today, onOpenTask }: UpcomingProps) {
       </header>
 
       {upcoming.length === 0 ? (
-        <p className="empty">Nenhuma entrega pela frente.</p>
+        <p className="empty">Nenhuma tarefa em aberto com prazo pela frente.</p>
       ) : (
         <ul className="upcoming">
           {upcoming.map((task) => {
