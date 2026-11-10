@@ -1,0 +1,718 @@
+/* =========================================================
+   Ateliê: a página de Artes como obra.
+   A parede (o mural) fica fixa atrás de tudo; a página passa por cima como um vidro escuro
+   que reflete a pintura. Cores do palco, letras creme, a cor vem da tinta.
+   ========================================================= */
+
+/* Sem a entrada de página: um "translate" num pai prende o position: fixed nele (a parede e a seção
+   presa passariam a medir a página inteira em vez da tela). Dois nomes de classe = vence o .content do backstage.css */
+.content.content--arts {
+  animation: none;
+  translate: none;
+  padding-top: 0;
+}
+
+.atelier {
+  /* Os tokens da galeria (gallery.css) trocados para o escuro: painéis, linhas e menus se adaptam sozinhos */
+  --g-surface: rgba(247, 240, 230, 0.05);
+  --g-sunken: rgba(247, 240, 230, 0.08);
+  --g-border: rgba(247, 240, 230, 0.13);
+  --g-divider: rgba(247, 240, 230, 0.08);
+  --g-ink: #f7f0e6;
+  --g-text: rgba(247, 240, 230, 0.78);
+  --g-muted: rgba(247, 240, 230, 0.5);
+  --panel-line: rgba(247, 240, 230, 0.12);
+  --a-ink: #f7f0e6;
+  --a-text: rgba(247, 240, 230, 0.78);
+  --a-muted: rgba(247, 240, 230, 0.5);
+  --a-line: rgba(247, 240, 230, 0.13);
+  --a-card: rgba(247, 240, 230, 0.05);
+  --a-soft: rgba(247, 240, 230, 0.08);
+  --cream-ink: #f7f0e6;
+  position: relative;
+  isolation: isolate;
+  /* Uma coluna que nunca cresce além da tela: sem isso a faixa diagonal (bem larga) esticaria a página toda */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+  color: var(--g-text);
+}
+
+/* ---------- A parede ---------- */
+.atelier__wall {
+  position: fixed;
+  inset: 0 0 0 236px; /* começa depois do menu */
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Escurece de cima para baixo: o topo mostra a pintura, o resto da página fica legível */
+.atelier__wall::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(21, 10, 14, 0.12) 0%, rgba(21, 10, 14, 0.55) 55%, rgba(21, 10, 14, 0.9) 100%),
+    radial-gradient(70% 60% at 15% 85%, rgba(21, 10, 14, 0.75), transparent 70%);
+}
+
+/* ---------- O vidro do topo (o "espelho") ---------- */
+.atelier__hero {
+  position: relative;
+  display: grid;
+  align-items: end;
+  min-height: calc(100vh - 120px);
+  padding: clamp(28px, 5vw, 72px);
+  overflow: hidden;
+  border: 1px solid rgba(247, 240, 230, 0.14);
+  border-radius: 32px;
+  background: linear-gradient(170deg, rgba(21, 10, 14, 0.08), rgba(21, 10, 14, 0.5) 75%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 0 80px rgba(21, 10, 14, 0.35);
+  backdrop-filter: blur(1.5px) saturate(1.15);
+}
+
+/* O reflexo: uma faixa de luz atravessa o vidro de vez em quando */
+.atelier__sheen {
+  position: absolute;
+  inset: -60%;
+  background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.1) 47%, rgba(255, 255, 255, 0.03) 51%, transparent 56%);
+  pointer-events: none;
+  animation: atelier-sheen 9s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes atelier-sheen {
+  0%,
+  55% {
+    translate: -45% 0;
+  }
+  100% {
+    translate: 45% 0;
+  }
+}
+
+.atelier__copy {
+  position: relative;
+  display: grid;
+  justify-items: start;
+}
+
+/* ---------- Título em mosaico ---------- */
+.mosaic {
+  position: relative;
+  margin: 0;
+  font-size: clamp(56px, 10.5vw, 172px);
+  font-weight: 800;
+  line-height: 0.86;
+  letter-spacing: -0.055em;
+  color: #f7f0e6;
+  text-shadow: 0 10px 40px rgba(21, 10, 14, 0.35);
+}
+
+.mosaic__base {
+  display: block;
+  visibility: hidden;
+}
+
+.mosaic__tile {
+  position: absolute;
+  inset: 0;
+  display: block;
+  will-change: transform;
+}
+
+.mosaic__line {
+  display: block;
+  white-space: nowrap;
+}
+
+/* ---------- Subtítulo que pinga ---------- */
+.atelier__lead {
+  max-width: 34ch;
+  margin: 26px 0 0;
+  font-size: clamp(17px, 1.45vw, 21px);
+  font-weight: 500;
+  line-height: 1.45;
+  color: rgba(247, 240, 230, 0.72);
+}
+
+.drip__word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.drip__char {
+  display: inline-block;
+  transform-origin: 50% 0;
+}
+
+.atelier__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 30px;
+}
+
+.atelier .g-button--primary {
+  background: #f7f0e6;
+  box-shadow: 0 14px 30px -14px rgba(0, 0, 0, 0.7);
+  color: #150a0e;
+}
+
+.atelier .g-button--primary:hover {
+  background: #fff;
+}
+
+.atelier .g-button--quiet {
+  background: rgba(247, 240, 230, 0.1);
+  color: #f7f0e6;
+}
+
+.atelier .g-button--quiet:hover {
+  background: rgba(247, 240, 230, 0.16);
+}
+
+/* ---------- Números, painéis e controles no escuro ---------- */
+.atelier .g-stats,
+.atelier .g-panel {
+  background: rgba(21, 10, 14, 0.72);
+  backdrop-filter: blur(16px);
+}
+
+.atelier .g-row:hover {
+  background: rgba(247, 240, 230, 0.06);
+}
+
+.atelier .g-segmented {
+  background: rgba(247, 240, 230, 0.08);
+}
+
+.atelier .g-segmented button {
+  color: rgba(247, 240, 230, 0.7);
+}
+
+.atelier .g-segmented button[aria-selected="true"] {
+  background: #f7f0e6;
+  color: #150a0e;
+}
+
+.atelier .sort__menu {
+  border-color: rgba(247, 240, 230, 0.14);
+  background: #22121a;
+}
+
+.atelier .g-gallery__head h2 {
+  font-size: clamp(34px, 4.4vw, 64px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  color: #f7f0e6;
+}
+
+/* ---------- Intervalo diagonal ---------- */
+.interlude {
+  position: relative;
+  min-width: 0;
+  margin: 0 -32px;
+}
+
+.interlude__pin {
+  display: flex;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 70% at 70% 40%, rgba(107, 39, 55, 0.45), transparent 70%),
+    rgba(21, 10, 14, 0.92);
+}
+
+/* A faixa inteira é girada: andar "para o lado" dentro dela vira andar na diagonal na tela */
+.interlude__tilt {
+  width: 100%;
+  transform: rotate(-8deg);
+  transform-origin: 0 50%;
+}
+
+.interlude__track {
+  display: flex;
+  align-items: center;
+  gap: 5vw;
+  width: max-content;
+  padding: 0 8vw;
+}
+
+.interlude__open,
+.interlude__close {
+  margin: 0;
+  font-size: clamp(44px, 6vw, 100px);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+  color: #f7f0e6;
+}
+
+.interlude__close {
+  color: var(--spot, #f3c7a8);
+}
+
+.scene {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(60vw, 760px);
+  height: 76vh;
+  margin: 0;
+}
+
+/* O verbo gigante, só o contorno, atrás da pessoa */
+.scene__verb {
+  position: absolute;
+  inset: auto -10% 4% -10%;
+  z-index: 0;
+  font-size: clamp(120px, 17vw, 300px);
+  font-weight: 800;
+  line-height: 0.8;
+  letter-spacing: -0.06em;
+  text-align: center;
+  color: transparent;
+  -webkit-text-stroke: 2px rgba(243, 199, 168, 0.5);
+}
+
+.scene__art {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.figure {
+  width: auto;
+  max-width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.5));
+}
+
+/* A legenda existe para leitores de tela; na tela, quem fala é o verbo gigante */
+.scene__caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* Movimentos das pessoas (giram em torno do ombro, do pé, da cintura...) */
+.painter__arm {
+  transform-box: view-box;
+  transform-origin: 186px 178px;
+  animation: painter-arm 1.3s ease-in-out infinite alternate;
+}
+
+@keyframes painter-arm {
+  from {
+    transform: rotate(-9deg);
+  }
+  to {
+    transform: rotate(7deg);
+  }
+}
+
+.painter__tip {
+  animation: painter-tip 5.6s linear infinite;
+}
+
+@keyframes painter-tip {
+  0%,
+  100% {
+    fill: #e07b45;
+  }
+  25% {
+    fill: #3f8ea5;
+  }
+  50% {
+    fill: #edb94e;
+  }
+  75% {
+    fill: #6e8748;
+  }
+}
+
+.painter__stroke {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: painter-stroke 5.6s ease-in-out infinite;
+}
+
+.painter__stroke:nth-child(2) {
+  animation-delay: 0.9s;
+}
+
+.painter__stroke:nth-child(3) {
+  animation-delay: 1.8s;
+}
+
+.painter__stroke:nth-child(4) {
+  animation-delay: 2.7s;
+}
+
+@keyframes painter-stroke {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 1;
+  }
+  30%,
+  82% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+.dancer__body {
+  transform-box: view-box;
+  transform-origin: 188px 494px;
+  animation: dancer-sway 2.2s ease-in-out infinite alternate;
+}
+
+@keyframes dancer-sway {
+  from {
+    transform: rotate(-5deg);
+  }
+  to {
+    transform: rotate(5deg);
+  }
+}
+
+.dancer__skirt {
+  transform-box: view-box;
+  transform-origin: 210px 252px;
+  animation: dancer-skirt 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes dancer-skirt {
+  from {
+    transform: scaleX(0.9);
+  }
+  to {
+    transform: scaleX(1.08);
+  }
+}
+
+.dancer__ribbon {
+  stroke-dasharray: 34 16;
+  animation: dancer-ribbon 1.4s linear infinite;
+}
+
+@keyframes dancer-ribbon {
+  to {
+    stroke-dashoffset: -50;
+  }
+}
+
+.singer__note {
+  opacity: 0;
+  transform-box: fill-box;
+  animation: singer-note 2.4s ease-out infinite;
+}
+
+@keyframes singer-note {
+  0% {
+    opacity: 0;
+    transform: translate(0, 10px) rotate(-8deg);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(26px, -70px) rotate(10deg);
+  }
+}
+
+.singer__mouth {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: singer-mouth 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes singer-mouth {
+  from {
+    transform: scaleY(0.5);
+  }
+  to {
+    transform: scaleY(1.15);
+  }
+}
+
+.singer__arm {
+  transform-box: view-box;
+  transform-origin: 234px 216px;
+  animation: singer-arm 2s ease-in-out infinite alternate;
+}
+
+@keyframes singer-arm {
+  from {
+    transform: rotate(-7deg);
+  }
+  to {
+    transform: rotate(5deg);
+  }
+}
+
+/* ---------- A galeria ---------- */
+/* A sala de exposição: vidro escuro, a pintura da parede só aparece de leve por trás */
+.atelier .g-gallery {
+  padding: clamp(24px, 3vw, 44px);
+  border-radius: 32px;
+  background: rgba(21, 10, 14, 0.82);
+  backdrop-filter: blur(18px);
+}
+
+.atelier__wallgrid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 44px 32px;
+  padding: 32px 0 8px;
+}
+
+/* O card: só a obra, sem moldura nem caixa, e a legenda em texto simples embaixo.
+   O toque artístico vem da própria arte e da faixa fina com as cores dela */
+.piece {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.piece__hit {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.piece__hit:focus-visible {
+  outline: 2px solid #f3c7a8;
+  outline-offset: 6px;
+}
+
+.piece__mat {
+  display: grid;
+  gap: 8px;
+  transition: translate 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.piece:hover .piece__mat,
+.piece:focus-within .piece__mat {
+  translate: 0 -4px;
+}
+
+.piece__canvas {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgba(247, 240, 230, 0.06);
+}
+
+.piece__canvas img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: scale 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.piece:hover .piece__canvas img {
+  scale: 1.03;
+}
+
+.piece__fallback {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(247, 240, 230, 0.45);
+  text-align: center;
+}
+
+.piece__swatches {
+  display: flex;
+  gap: 2px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.piece__caption {
+  display: grid;
+  gap: 3px;
+  padding: 0 2px;
+}
+
+.piece__caption h3 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #f7f0e6;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.piece__caption p {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(247, 240, 230, 0.66);
+}
+
+.piece__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.piece__caption .piece__meta {
+  font-size: 12px;
+  color: rgba(247, 240, 230, 0.45);
+}
+
+.piece__comments {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---------- Cursor de tinta ---------- */
+.atelier.has-paint-cursor:not(:has(dialog[open])),
+.atelier.has-paint-cursor:not(:has(dialog[open])) * {
+  cursor: none;
+}
+
+.atelier.has-paint-cursor:not(:has(dialog[open])) :is(input, textarea) {
+  cursor: text;
+}
+
+.paint-trail {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+
+.paint-tip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 31;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: var(--paint, #edb94e);
+  box-shadow: 0 0 0 2px rgba(21, 10, 14, 0.55);
+  transition: scale 0.2s;
+  pointer-events: none;
+}
+
+.atelier:not(.has-paint-cursor) .paint-tip,
+.atelier:has(dialog[open]) .paint-tip,
+.atelier:has(dialog[open]) .paint-trail {
+  display: none;
+}
+
+/* ---------- Telas menores ---------- */
+@media (max-width: 900px) {
+  .atelier__wall {
+    left: 0;
+  }
+
+  .atelier__hero {
+    min-height: calc(100svh - 200px);
+    border-radius: 24px;
+  }
+
+  /* No celular as cenas ficam empilhadas, sem rolagem presa nem giro */
+  .interlude {
+    margin: 0 -16px;
+  }
+
+  .interlude__pin {
+    height: auto;
+    padding: 56px 0;
+  }
+
+  .interlude__tilt {
+    transform: none;
+  }
+
+  .interlude__track {
+    flex-direction: column;
+    width: 100%;
+    gap: 40px;
+    padding: 0 20px;
+  }
+
+  .interlude__open,
+  .interlude__close {
+    font-size: clamp(36px, 11vw, 56px);
+    white-space: normal;
+  }
+
+  .scene {
+    width: 100%;
+    height: 62vh;
+  }
+
+  .scene__verb {
+    font-size: clamp(90px, 30vw, 160px);
+  }
+
+  .atelier__wallgrid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 28px 16px;
+  }
+
+  .atelier .g-gallery {
+    padding: 20px 16px;
+    border-radius: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atelier__sheen,
+  .painter__arm,
+  .painter__tip,
+  .painter__stroke,
+  .dancer__body,
+  .dancer__skirt,
+  .dancer__ribbon,
+  .singer__note,
+  .singer__mouth,
+  .singer__arm {
+    animation: none;
+  }
+
+  .painter__stroke {
+    stroke-dashoffset: 0;
+  }
+
+  .singer__note {
+    opacity: 1;
+  }
+}

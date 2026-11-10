@@ -390,7 +390,12 @@ const GRAIN =
       `<rect width='100%' height='100%' filter='url(#b)'/><rect width='100%' height='100%' filter='url(#g)'/></svg>`,
   );
 
-export function ModernistMural() {
+type ModernistMuralProps = {
+  // 1 = ritmo normal; 1.7 = 70% mais rápido (a parede da página de Artes)
+  speed?: number;
+};
+
+export function ModernistMural({ speed = 1 }: ModernistMuralProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -506,6 +511,8 @@ export function ModernistMural() {
         .to(brush, { opacity: 0, duration: 0.8, ease: "power2.in" }, "<0.4")
         .call(hideAll);
 
+      tl.timeScale(speed);
+
       // Fora da tela, pausa (economiza CPU)
       ScrollTrigger.create({
         trigger: frame,
@@ -516,8 +523,8 @@ export function ModernistMural() {
 
       // Com o mouse em cima, a pintura desacelera para o admin acompanhar os detalhes
       if (window.matchMedia("(hover: hover)").matches) {
-        const onEnter = () => gsap.to(tl, { timeScale: 0.4, duration: 0.6, ease: "power2.out" });
-        const onLeave = () => gsap.to(tl, { timeScale: 1, duration: 0.6, ease: "power2.out" });
+        const onEnter = () => gsap.to(tl, { timeScale: speed * 0.4, duration: 0.6, ease: "power2.out" });
+        const onLeave = () => gsap.to(tl, { timeScale: speed, duration: 0.6, ease: "power2.out" });
         frame.addEventListener("pointerenter", onEnter);
         frame.addEventListener("pointerleave", onLeave);
         return () => {
@@ -528,7 +535,7 @@ export function ModernistMural() {
     }, frame);
 
     return () => ctx.revert();
-  }, []);
+  }, [speed]);
 
   return (
     <div className="mural">

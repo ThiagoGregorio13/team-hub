@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MessageCircle } from "lucide-react";
 import type { GalleryArt } from "../../api";
-import { STATE_LABEL, avatarOf, hostOf, initialsOf, niceName, stateOf, whenLabel, type MuralItem } from "./artUtils";
+import { hostOf, niceName, whenLabel, type MuralItem } from "./artUtils";
 import { usePalette } from "./palette";
 
 type GalleryCardProps = {
@@ -12,7 +12,7 @@ type GalleryCardProps = {
 function Cover({ art, title }: { art: GalleryArt; title: string }) {
   const [broken, setBroken] = useState(false);
   if (broken) {
-    return <span className="g-card__fallback">{hostOf(art.art_url)}</span>;
+    return <span className="piece__fallback">{hostOf(art.art_url)}</span>;
   }
   return (
     <img
@@ -26,45 +26,43 @@ function Cover({ art, title }: { art: GalleryArt; title: string }) {
   );
 }
 
+// A obra em destaque numa margem clara (passe-partout), como numa galeria.
+// O status não aparece no card: quem diz isso são os filtros (Em revisão, Ajustes, Aprovadas).
 export function GalleryCard({ item, onOpen }: GalleryCardProps) {
   const { task, latest, comments } = item;
   const palette = usePalette(latest?.art_url);
   if (!latest) return null;
 
-  const state = stateOf(item);
-  const avatar = avatarOf(task.member_name);
-
   return (
-    <li className="mural-item g-card" data-flip-id={`task-${task.id}`}>
-      <button type="button" className="g-card__hit" onClick={onOpen} aria-label={`Abrir revisão de ${task.title}`} />
+    <li className="mural-item piece" data-flip-id={`task-${task.id}`}>
+      <button type="button" className="piece__hit" onClick={onOpen} aria-label={`Abrir revisão de ${task.title}`} />
 
-      <div className="g-card__media">
-        <Cover art={latest} title={task.title} />
-        <span className={`g-badge g-badge--${state}`}>{STATE_LABEL[state]}</span>
-        <span className="g-card__version">V{latest.version}</span>
-      </div>
-
-      <div className="g-card__body">
-        <h3 className="g-card__title">{task.title}</h3>
-        <div className="g-card__meta">
-          <span className="g-avatar" style={{ background: avatar.bg, color: avatar.fg }} aria-hidden="true">
-            {initialsOf(task.member_name)}
-          </span>
-          <span className="g-card__who">{niceName(task.member_name)}</span>
-          <span className="g-card__dot" aria-hidden="true" />
-          <span className="g-card__when">{whenLabel(latest.created_at)}</span>
+      <div className="piece__mat">
+        <div className="piece__canvas">
+          <Cover art={latest} title={task.title} />
         </div>
-        <div className="g-card__foot">
-          <span className="g-palette" aria-label="Cores da arte">
-            {(palette ?? []).map((swatch) => (
-              <i key={swatch.hex} style={{ background: swatch.hex }} title={swatch.hex.toUpperCase()} />
+        {/* As cores da arte numa faixa fina, cada uma do tamanho que ocupa na imagem */}
+        {palette && palette.length > 0 && (
+          <span className="piece__swatches" aria-hidden="true">
+            {palette.map((swatch) => (
+              <i key={swatch.hex} style={{ background: swatch.hex, flexGrow: Math.max(swatch.share, 0.05) }} />
             ))}
           </span>
-          <span className="g-card__comments" aria-label={`${comments} comentários`}>
-            <MessageCircle size={15} aria-hidden="true" />
+        )}
+      </div>
+
+      <div className="piece__caption">
+        <h3>{task.title}</h3>
+        <p>
+          {niceName(task.member_name)}, versão {latest.version}
+        </p>
+        <p className="piece__meta">
+          <span>{whenLabel(latest.created_at)}</span>
+          <span className="piece__comments" aria-label={`${comments} comentários`}>
+            <MessageCircle size={13} aria-hidden="true" />
             {comments}
           </span>
-        </div>
+        </p>
       </div>
     </li>
   );

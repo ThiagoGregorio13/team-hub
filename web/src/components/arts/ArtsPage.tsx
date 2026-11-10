@@ -6,6 +6,10 @@ import { CheckCircle2, Clock3, ImagePlus, Plus, RotateCcw } from "lucide-react";
 import { getGallery, isAdminSession, type GalleryArt, type TaskRow } from "../../api";
 import { prefersReducedMotion } from "../../motion";
 import { ModernistMural } from "./ModernistMural";
+import { MosaicTitle } from "./MosaicTitle";
+import { DripText } from "./DripText";
+import { PaintCursor } from "./PaintCursor";
+import { Interlude } from "./Interlude";
 import { GalleryCard } from "./GalleryCard";
 import { ArtDetail } from "./ArtDetail";
 import { SendArtDialog } from "./SendArtDialog";
@@ -14,6 +18,7 @@ import { useSmoothScroll } from "./useSmoothScroll";
 import { avatarOf, buildMural, dueLabel, initialsOf, niceName, sinceLabel, stateOf, type MuralItem, type MuralState } from "./artUtils";
 import "./arts.css";
 import "./gallery.css";
+import "./atelier.css";
 
 gsap.registerPlugin(Flip, ScrollTrigger);
 
@@ -108,27 +113,62 @@ export function ArtsPage({ tasks, query, ready }: ArtsPageProps) {
     change();
   }
 
-  // Entrada discreta: tudo sobe um pouco e aparece, em sequência
+  // A entrada: o título se monta como mosaico, o subtítulo cai letra por letra como pingos de tinta
   useLayoutEffect(() => {
     const root = rootRef.current;
     if (!root || !loaded || !ready) return;
     const ctx = gsap.context(() => {
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
-        const done = "transform,opacity,visibility";
-        gsap
-          .timeline({ defaults: { ease: "power3.out", duration: 0.8, clearProps: done } })
-          .from(".g-hero__copy > *", { y: 18, autoAlpha: 0, stagger: 0.07 })
-          .from(".g-hero__art", { autoAlpha: 0, duration: 1.2 }, 0.1)
-          .from(".g-stat", { y: 18, autoAlpha: 0, stagger: 0.06 }, 0.25);
+        const done = "transform,opacity,visibility,color";
+        const random = gsap.utils.random;
+        const tl = gsap.timeline({ defaults: { ease: "expo.out" } });
 
-        const cards = gsap.utils.toArray<HTMLElement>(".g-card, .g-row");
+        // Cada azulejo vem de um lugar, girado e colorido, e encaixa no lugar certo
+        tl.fromTo(
+          ".mosaic__tile",
+          {
+            x: () => random(-220, 220),
+            y: () => random(-160, 160),
+            rotation: () => random(-50, 50),
+            scale: () => random(0.3, 1.7),
+            autoAlpha: 0,
+            color: (_i: number, el: HTMLElement) => el.dataset.color ?? "#f7f0e6",
+          },
+          {
+            x: 0,
+            y: 0,
+            rotation: 0,
+            scale: 1,
+            autoAlpha: 1,
+            duration: 1.3,
+            stagger: { each: 0.014, from: "random" },
+            clearProps: "transform,opacity,visibility",
+          },
+        )
+          // ...e só depois de montado perde a cor e fica da cor do texto
+          .to(".mosaic__tile", { color: "#f7f0e6", duration: 0.9, ease: "power2.out", stagger: { each: 0.01, from: "random" }, clearProps: "color" }, ">-0.35")
+          // Pingos: cada letra cai esticada, colorida, e quica até assentar
+          .fromTo(
+            ".drip__char",
+            { y: -46, scaleY: 2.2, autoAlpha: 0, color: () => gsap.utils.random(["#edb94e", "#86c4d2", "#e9a08a", "#93ab68", "#e07b45"]) },
+            { y: 0, scaleY: 1, autoAlpha: 1, color: "rgba(247, 240, 230, 0.72)", duration: 1, ease: "bounce.out", stagger: { each: 0.016 }, clearProps: done },
+            0.7,
+          )
+          .from(".atelier__actions > *", { y: 16, autoAlpha: 0, duration: 0.8, stagger: 0.08, ease: "power3.out", clearProps: done }, 1.3)
+          .from(".g-stat", { y: 20, autoAlpha: 0, duration: 0.8, stagger: 0.07, ease: "power3.out", clearProps: done }, 1.4);
+
+        const cards = gsap.utils.toArray<HTMLElement>(".piece, .g-row");
         gsap.set(cards, { autoAlpha: 0 });
         ScrollTrigger.batch(cards, {
-          start: "top 94%",
+          start: "top 92%",
           once: true,
           onEnter: (batch) =>
-            gsap.fromTo(batch, { y: 22, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7, ease: "power3.out", stagger: 0.06, clearProps: done }),
+            gsap.fromTo(
+              batch,
+              { y: 24, autoAlpha: 0 },
+              { y: 0, autoAlpha: 1, duration: 0.8, ease: "power3.out", stagger: 0.06, clearProps: done },
+            ),
         });
       });
     }, root);
@@ -160,12 +200,22 @@ export function ArtsPage({ tasks, query, ready }: ArtsPageProps) {
   }
 
   return (
-    <div className="arts g-page" ref={rootRef}>
-      <section className="g-hero" aria-labelledby="arts-title">
-        <div className="g-hero__copy">
-          <h1 id="arts-title">Revisão de artes</h1>
-          <p>Envie novas versões, acompanhe o retorno da direção e veja o que já foi aprovado.</p>
-          <div className="g-hero__actions">
+    <div className="arts g-page atelier" ref={rootRef}>
+      {/* A parede: o mural fica fixo atrás de tudo; a página passa por cima como um vidro */}
+      <div className="atelier__wall" aria-hidden="true">
+        <ModernistMural speed={1.7} />
+      </div>
+      <PaintCursor />
+
+      <section className="atelier__hero" aria-labelledby="arts-title">
+        <span className="atelier__sheen" aria-hidden="true" />
+        <div className="atelier__copy">
+          <MosaicTitle id="arts-title" lines={["Revisão", "de artes"]} />
+          <DripText
+            className="atelier__lead"
+            text="Envie novas versões, acompanhe o retorno da direção e veja o que já foi aprovado."
+          />
+          <div className="atelier__actions">
             <button type="button" className="g-button g-button--primary" onClick={() => openSend()}>
               <Plus size={17} aria-hidden="true" />
               Enviar arte
@@ -176,9 +226,6 @@ export function ArtsPage({ tasks, query, ready }: ArtsPageProps) {
               </a>
             )}
           </div>
-        </div>
-        <div className="g-hero__art">
-          <ModernistMural />
         </div>
       </section>
 
@@ -194,6 +241,8 @@ export function ArtsPage({ tasks, query, ready }: ArtsPageProps) {
           </li>
         ))}
       </ul>
+
+      <Interlude />
 
       {error && (
         <p className="arts-notice arts-notice--error" role="alert">
@@ -242,7 +291,7 @@ export function ArtsPage({ tasks, query, ready }: ArtsPageProps) {
 
       <section className="g-gallery" aria-labelledby="gallery-title">
         <header className="g-gallery__head">
-          <h2 id="gallery-title">Mural</h2>
+          <h2 id="gallery-title">As artes do time</h2>
           <div className="g-toolbar">
             <div className="g-segmented" role="tablist" aria-label="Filtrar">
               {FILTERS.map(({ value, label }) => (
@@ -270,7 +319,7 @@ export function ArtsPage({ tasks, query, ready }: ArtsPageProps) {
           </div>
         )}
 
-        <ul ref={gridRef} className="g-grid">
+        <ul ref={gridRef} className="g-grid atelier__wallgrid">
           {visible.map((item) => (
             <GalleryCard key={item.task.id} item={item} onOpen={() => setDetailId(item.task.id)} />
           ))}

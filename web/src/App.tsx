@@ -189,7 +189,7 @@ setTaskToDelete(id);
   const lateCount = data?.tasks.filter((t) => isOverdue(t, today)).length ?? 0;
 
   return (
-    <div className="layout">
+    <div className={`layout layout--${view}`}>
       <Sidebar view={view} onOpenArts={openArts} />
 
       <div className="main">

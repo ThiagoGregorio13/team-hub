@@ -970,6 +970,93 @@ button.ticket:focus-visible {
   outline-offset: 2px;
 }
 
+/* ---------- Página de Artes: a moldura fica clara e a obra fica escura ---------- */
+/* Nas outras páginas o menu é o "palco" escuro; em Artes ele vira a parede clara da galeria
+   e o escuro passa para a página, onde o mural é pintado. */
+.sidebar,
+.header {
+  transition:
+    background-color 0.5s ease,
+    color 0.5s ease;
+}
+
+.layout--arts,
+.layout--arts .main {
+  background: var(--stage);
+}
+
+.layout--arts .sidebar {
+  background: #f3ede3;
+  box-shadow: 1px 0 0 rgba(36, 27, 29, 0.06);
+  color: var(--ink);
+}
+
+.layout--arts .sidebar::before {
+  background: linear-gradient(180deg, rgba(107, 39, 55, 0.07), transparent 75%);
+}
+
+.layout--arts .sidebar__brand {
+  color: var(--ink);
+}
+
+.layout--arts .nav__item,
+.layout--arts .sidebar__logout {
+  color: var(--text);
+}
+
+.layout--arts .nav__item:hover,
+.layout--arts .sidebar__logout:hover {
+  background: rgba(36, 27, 29, 0.05);
+  color: var(--ink);
+}
+
+.layout--arts .nav__item.is-active {
+  background: linear-gradient(90deg, rgba(107, 39, 55, 0.13), rgba(107, 39, 55, 0) 85%);
+  color: var(--primary);
+}
+
+.layout--arts .nav__item.is-active svg {
+  color: var(--primary);
+}
+
+.layout--arts .nav__item.is-active::before {
+  background: var(--primary);
+  box-shadow: 0 0 14px 2px rgba(107, 39, 55, 0.35);
+}
+
+.layout--arts .sidebar__foot {
+  border-top-color: rgba(36, 27, 29, 0.08);
+}
+
+.layout--arts .header {
+  background: rgba(21, 10, 14, 0.55);
+  backdrop-filter: blur(14px);
+  color: var(--stage-text);
+}
+
+.layout--arts .header__date {
+  color: var(--stage-muted);
+}
+
+.layout--arts .search,
+.layout--arts .icon-button {
+  border-color: rgba(247, 240, 230, 0.14);
+  background: rgba(247, 240, 230, 0.06);
+  color: var(--stage-muted);
+}
+
+.layout--arts .search input {
+  color: var(--stage-text);
+}
+
+.layout--arts .search input::placeholder {
+  color: var(--stage-muted);
+}
+
+.layout--arts .icon-button {
+  color: var(--stage-text);
+}
+
 /* ---------- Telas médias ---------- */
 @media (max-width: 1180px) {
   .stage {
