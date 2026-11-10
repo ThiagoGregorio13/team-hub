@@ -4,7 +4,7 @@ import { createMiddleware } from "hono/factory";
 import type { JWTPayload } from "hono/utils/jwt/types";
 import { cors } from "hono/cors";
 import { bearerAuth } from "hono/bearer-auth";
-import type { Context } from "hono";
+import { Context } from "hono";
 import { sql } from "bun";
 import {
   GoogleGenAI,
@@ -26,6 +26,7 @@ import {
   getStatsByMember,
   getPendingReviews,
   addNote,
+  previewNotes,
 } from "./tools";
 import { properties } from "zod";
 
@@ -749,7 +750,7 @@ app.post("/notes", requireAuth, requireAdmin, async (c) => {
   const body = await c.req.json();
 
   if (typeof body.content !== "string") {
-    return c.json({ error: "notes must be text" }, 404);
+    return c.json({ error: "notes must be text" }, 400);
   }
 
   const content = body.content.trim();
@@ -767,18 +768,54 @@ app.post("/notes", requireAuth, requireAdmin, async (c) => {
   let note;
   try {
     note = await addNote(content);
- 
   } catch (error) {
     console.error("Error adding note", error);
     return c.json({ error: "Failed to save note" }, 503);
   }
 
-     if (!note) {
-      return c.json({error: "note already registered"}, 409)
-}
+  if (!note) {
+    return c.json({ error: "note already registered" }, 409);
+  }
 
   return c.json(note, 201);
+});
 
+app.get("/notes", requireAuth, async (c) => {
+  const rows = await sql`
+ SELECT id, content FROM notes ORDER BY id DESC
+  `;
+  return c.json(rows);
+});
+
+app.delete("/notes/:id", requireAuth, requireAdmin, async (c) => {
+  const id = Number(c.req.param("id"));
+
+  const rows = await sql`
+DELETE FROM notes WHERE id = ${id}
+RETURNING id
+`;
+  if (rows.length === 0) {
+    return c.json({ error: "note not found" }, 404);
+  }
+  return c.body(null, 204);
+});
+
+app.get("/notes/search", requireAuth, async (c) => {
+  const query = c.req.query("q")?.trim() ?? "";
+
+  if (!query) {
+    return c.json({ error: "query is required" }, 400);
+  }
+
+  let matches;
+  try {
+    matches = await previewNotes(query);
+  } catch (error) {
+    console.error("Error preview note", error);
+    return c.json({ error: "Failed to see note" }, 503);
+  }
+
+  return c.json(matches);
 });
 
 export default app;
