@@ -8,6 +8,7 @@ import {
 
 const ai = new GoogleGenAI({});
 const MODEL = "gemini-3.1-flash-lite";
+export const MIN_SCORE = 0.6;
 
 export type TaskRow = {
   id: number;
@@ -66,14 +67,29 @@ export async function getOverdueTasks(): Promise<TaskRow[]> {
 
 export async function searchNotes(query: string) {
   const questionVector = JSON.stringify(await embed(query));
-
   const rows = await sql`
-    SELECT content, 1 - (embedding <=> ${questionVector}::vector) AS score
+    SELECT content AS score
     FROM notes
-    ORDER BY embedding <=> ${questionVector}::vector
+WHERE 1 - (embedding <=> ${questionVector}::vector) >= ${MIN_SCORE}  
+  ORDER BY embedding <=> ${questionVector}::vector 
     LIMIT 3
   `;
   return rows;
+}
+
+export async function previewNotes(query: string) {
+  const questionVector = JSON.stringify(await embed(query));
+  const rows = await sql`
+SELECT content, 1 - (embedding <=> ${questionVector}::vector) AS score
+    FROM notes
+  ORDER BY embedding <=> ${questionVector}::vector 
+    LIMIT 5
+  `;
+  return rows.map((row: any) => ({
+    content: row.content,
+    score: Number(row.score),
+    relevant: Number(row.score) >= MIN_SCORE,
+  }));
 }
 
 export async function getStatsByStatus(): Promise<StatusCount[]> {
@@ -107,13 +123,12 @@ export async function getPendingReviews(): Promise<ReviewRow[]> {
 }
 
 export async function embed(text: string): Promise<number[]> {
- const response = await ai.models.embedContent({
+  const response = await ai.models.embedContent({
     model: "gemini-embedding-001",
     contents: text,
     config: { outputDimensionality: 768 },
   });
   return response.embeddings![0].values!;
-
 }
 
 export async function addNote(content: string) {
@@ -125,5 +140,5 @@ export async function addNote(content: string) {
    ON CONFLICT (content) DO NOTHING
    RETURNING id, content
   `;
-  return rows;
+  return rows[0];
 }
