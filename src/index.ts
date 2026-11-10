@@ -332,9 +332,13 @@ app.patch("/tasks/:id", async (c) => {
   if (!values.includes(body.status)) {
     return c.json({ error: "invalid status" }, 400);
   }
+  // COALESCE: se a tarefa já estava concluída, mantém a data em que foi concluída da primeira vez
   const rows = await sql`
-  UPDATE tasks SET status = ${body.status}, completed_at = CASE WHEN ${body.status} = 'done' THEN now() ELSE NULL END WHERE id = ${id}
+  UPDATE tasks SET status = ${body.status}, completed_at = CASE WHEN ${body.status} = 'done' THEN COALESCE(completed_at, now()) ELSE NULL END WHERE id = ${id}
   RETURNING  id, title, status, member_id, completed_at`;
+  if (rows.length === 0) {
+    return c.json({ error: "task not found" }, 404);
+  }
   return c.json(rows[0]);
 });
 
