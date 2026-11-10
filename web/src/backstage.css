@@ -970,6 +970,276 @@ button.ticket:focus-visible {
   outline-offset: 2px;
 }
 
+/* ---------- Notas (base de conhecimento) ---------- */
+.notes {
+  align-items: start;
+}
+
+.notes__main {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.composer__field {
+  width: 100%;
+  min-height: 96px;
+  padding: 14px 16px;
+  border: 1px solid var(--panel-line);
+  border-radius: 12px;
+  background: var(--bg);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink);
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.composer__field:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+.composer__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.composer__count {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.composer__count.is-off {
+  color: var(--alert);
+}
+
+.composer__error {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--alert);
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* Cada nota é um trecho de texto com uma régua à esquerda, como uma citação */
+.note-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note {
+  display: grid;
+  gap: 8px;
+  padding: 16px 0 16px 16px;
+  border-top: 1px solid var(--panel-line);
+  box-shadow: inset 2px 0 0 var(--neutral-50);
+  transition: box-shadow 0.2s;
+}
+
+.note:first-child {
+  border-top: none;
+}
+
+.note:hover {
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+
+.note__text {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.note__meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.note__delete {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  opacity: 0;
+  transition:
+    opacity 0.2s,
+    background 0.2s,
+    color 0.2s;
+}
+
+.note:hover .note__delete,
+.note__delete:focus-visible {
+  opacity: 1;
+}
+
+.note__delete:hover {
+  background: var(--alert-50);
+  color: var(--alert);
+}
+
+/* Teste da busca: painel escuro, como o palco, porque mostra o que acontece "por trás" da IA */
+.probe {
+  position: sticky;
+  top: 100px;
+  border-color: transparent;
+  background:
+    radial-gradient(120% 70% at 100% 120%, rgba(107, 39, 55, 0.55), transparent 60%),
+    var(--stage);
+  color: var(--stage-text);
+}
+
+.probe .card__header h2 {
+  color: var(--stage-text);
+}
+
+.probe .card__subtitle {
+  color: var(--stage-muted);
+}
+
+.probe__form {
+  display: flex;
+  gap: 8px;
+}
+
+.probe__form input {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(247, 240, 230, 0.16);
+  border-radius: 12px;
+  background: rgba(247, 240, 230, 0.06);
+  font: inherit;
+  font-size: 14px;
+  color: var(--stage-text);
+}
+
+.probe__form input::placeholder {
+  color: var(--stage-muted);
+}
+
+.probe__form input:focus {
+  border-color: var(--spot);
+  outline: none;
+}
+
+.probe .icon-button {
+  border-color: rgba(247, 240, 230, 0.16);
+  background: var(--stage-text);
+  color: var(--stage);
+}
+
+.probe .icon-button:disabled {
+  opacity: 0.4;
+}
+
+.probe .empty,
+.probe .composer__error {
+  color: var(--stage-muted);
+}
+
+.matches {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.match {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(247, 240, 230, 0.05);
+  opacity: 0.55;
+}
+
+.match.is-relevant {
+  background: rgba(243, 199, 168, 0.1);
+  opacity: 1;
+}
+
+.match__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.match__head strong {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.match__head span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--stage-muted);
+}
+
+.match.is-relevant .match__head span {
+  color: var(--spot);
+}
+
+.match__bar {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: rgba(247, 240, 230, 0.1);
+}
+
+.match__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--stage-muted);
+}
+
+.match.is-relevant .match__bar span {
+  background: var(--spot);
+}
+
+.match p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--stage-text);
+}
+
+@media (max-width: 1100px) {
+  .probe {
+    position: static;
+  }
+}
+
 /* ---------- Página de Artes: a moldura fica clara e a obra fica escura ---------- */
 /* Nas outras páginas o menu é o "palco" escuro; em Artes ele vira a parede clara da galeria
    e o escuro passa para a página, onde o mural é pintado. */
@@ -1104,7 +1374,7 @@ button.ticket:focus-visible {
   }
 
   .nav {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 2px;
   }
 

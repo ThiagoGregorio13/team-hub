@@ -1,8 +1,8 @@
 import type { MouseEvent } from "react";
-import { CalendarRange, LayoutGrid, ListChecks, LogOut, Palette, Users } from "lucide-react";
+import { BookOpen, CalendarRange, LayoutGrid, ListChecks, LogOut, Palette, Users } from "lucide-react";
 import { clearToken } from "../api";
 
-export type View = "overview" | "tasks" | "team" | "schedule" | "arts";
+export type View = "overview" | "tasks" | "team" | "schedule" | "notes" | "arts";
 
 type SidebarProps = {
   view: View;
@@ -16,6 +16,7 @@ const NAV: { view: View; href: string; label: string; icon: typeof LayoutGrid }[
   { view: "tasks", href: "#tasks", label: "Tarefas", icon: ListChecks },
   { view: "team", href: "#team", label: "Equipe", icon: Users },
   { view: "schedule", href: "#schedule", label: "Cronograma", icon: CalendarRange },
+  { view: "notes", href: "#notes", label: "Notas", icon: BookOpen },
   { view: "arts", href: "#artes", label: "Artes", icon: Palette },
 ];
 

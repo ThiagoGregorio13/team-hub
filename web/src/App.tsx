@@ -19,6 +19,7 @@ import { Header } from "./components/Header";
 import { StatCards } from "./components/StatCards";
 import { Stage } from "./components/Stage";
 import { TeamPage } from "./components/TeamPage";
+import { NotesPage } from "./components/NotesPage";
 import { WorkloadChart } from "./components/WorkloadChart";
 import { StatusDonut } from "./components/StatusDonut";
 import { TaskTable, type TaskFilter } from "./components/TaskTable";
@@ -47,6 +48,7 @@ const VIEWS: Record<string, View> = {
   "#tasks": "tasks",
   "#team": "team",
   "#schedule": "schedule",
+  "#notes": "notes",
   "#artes": "arts",
 };
 
@@ -55,6 +57,7 @@ const TITLES: Record<View, string | null> = {
   tasks: "Tarefas",
   team: "Equipe",
   schedule: "Cronograma",
+  notes: "Notas do time",
   arts: null, // Artes tem o próprio título grande
 };
 
@@ -268,6 +271,8 @@ setTaskToDelete(id);
               onNewTask={() => setNewTaskOpen(true)}
             />
           )}
+
+          {view === "notes" && <NotesPage admin={isAdminSession()} />}
 
           {data && view === "arts" && <ArtsPage tasks={data.tasks} query={query} ready={!covered} />}
         </main>

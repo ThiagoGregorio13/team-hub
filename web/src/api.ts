@@ -77,7 +77,7 @@ async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, { headers: authHeaders() });
   handleUnauthorized(res);
   if (!res.ok) {
-    throw new Error(`GET ${path} falhou com status ${res.status}`);
+    throw new ApiError(`GET ${path} falhou com status ${res.status}`, res.status);
   }
   return res.json();
 }
@@ -104,7 +104,7 @@ async function del(path: string): Promise<void> {
   handleUnauthorized(res);
 
   if (!res.ok) {
-    throw new Error(`DELETE ${path} falhou com status ${res.status}`);
+    throw new ApiError(`DELETE ${path} falhou com status ${res.status}`, res.status);
   }
 }
 
@@ -285,3 +285,13 @@ export const decideReview = (
 export const analyzeArt = (taskId: number, reviewId: number,
 ) =>
   post<ArtAnalysis>(`/tasks/${taskId}/reviews/${reviewId}/ai-analysis`, {});
+
+// ---------- Base de conhecimento (notas que a IA consulta) ----------
+export type Note = { id: number; content: string; created_at?: string };
+// Resultado do teste de busca: a nota, a semelhança (0 a 1) e se ela passou do limite (MIN_SCORE)
+export type NoteMatch = { content: string; score: number; relevant: boolean };
+
+export const getNotes = () => get<Note[]>("/notes");
+export const createNote = (content: string) => post<Note>("/notes", { content });
+export const deleteNote = (id: number) => del(`/notes/${id}`);
+export const searchNotesPreview = (q: string) => get<NoteMatch[]>(`/notes/search?q=${encodeURIComponent(q)}`);
