@@ -1,4 +1,3 @@
-// Mesmos formatos que a API devolve (ver team-hub/src/index.ts)
 export type Status = "pending" | "in_progress" | "done";
 export type ReviewStatus = "pending" | "approved" | "changes_requested";
 
@@ -203,7 +202,6 @@ export const STATUS_LABEL: Record<Status, string> = {
 export const STATUS_ORDER: Status[] = ["pending", "in_progress", "done"];
 
 // Data de hoje no fuso local, no mesmo formato do due_date ("2026-10-28").
-// toISOString() usaria UTC e viraria o dia antes da hora certa no Brasil.
 export function todayLocal(): string {
   const d = new Date();
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -211,29 +209,24 @@ export function todayLocal(): string {
   return `${d.getFullYear()}-${month}-${day}`;
 }
 
-// "2026-10-15" → "15/10/2026" (sem new Date, para não ter problema de fuso)
 export function formatDate(isoDate: string): string {
   const [year, month, day] = isoDate.split("-");
   return `${day}/${month}/${year}`;
 }
 
-// Mesma regra do getOverdueTasks() da API; o MemberChart usa para pintar a data de vinho
 export function isOverdue(task: TaskRow, today: string): boolean {
   return task.due_date < today && task.status !== "done";
 }
 
-// "2026-10-28" → número de dias desde 1970, sempre em UTC para a conta não depender do fuso
 export function toDayNumber(isoDate: string): number {
   const [year, month, day] = isoDate.split("-").map(Number);
   return Date.UTC(year, month - 1, day) / 86_400_000;
 }
 
-// Positivo = faltam X dias; 0 = hoje; negativo = já passou
 export function daysUntil(dueDate: string, today: string): number {
   return toDayNumber(dueDate) - toDayNumber(today);
 }
 
-// No banco os nomes estão em maiúsculas ("PEDRO"); na tela fica "Pedro"
 export function displayName(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 }
@@ -288,7 +281,6 @@ export const analyzeArt = (taskId: number, reviewId: number,
 
 // ---------- Base de conhecimento (notas que a IA consulta) ----------
 export type Note = { id: number; content: string; created_at?: string };
-// Resultado do teste de busca: a nota, a semelhança (0 a 1) e se ela passou do limite (MIN_SCORE)
 export type NoteMatch = { content: string; score: number; relevant: boolean };
 
 export const getNotes = () => get<Note[]>("/notes");
