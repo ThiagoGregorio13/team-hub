@@ -970,6 +970,43 @@ button.ticket:focus-visible {
   outline-offset: 2px;
 }
 
+/* ---------- Conversa com a IA ---------- */
+.ask__body {
+  align-content: start;
+}
+
+.ask__turn {
+  display: grid;
+  gap: 8px;
+}
+
+.ask__answer {
+  justify-self: start;
+  max-width: 88%;
+}
+
+.ask__foot .ask__reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.ask__reset:hover {
+  background: var(--primary-50);
+}
+
+.ask__reset:disabled {
+  opacity: 0.4;
+}
+
 /* ---------- Notas (base de conhecimento) ---------- */
 .notes {
   align-items: start;
