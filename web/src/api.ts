@@ -269,6 +269,27 @@ export const toggleChecklistItem = (
 
 export const deleteChecklistItem = (taskId: number, itemId: number) =>
   del(`/tasks/${taskId}/checklist/${itemId}`);
+// Envia uma imagem do computador e devolve o link http dela,
+// pronto para usar no submitReview como se fosse um link colado.
+// Sem Content-type: o navegador monta sozinho o multipart com o "boundary".
+export async function uploadArt(file: File): Promise<string> {
+  const form = new FormData();
+  form.append("file", file);
+
+  const res = await fetch(`${API_URL}/uploads`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: form,
+  });
+  handleUnauthorized(res);
+
+  if (!res.ok) {
+    throw new ApiError(`POST /uploads falhou com status ${res.status}`, res.status);
+  }
+  const { url } = (await res.json()) as { url: string };
+  return url;
+}
+
 export const submitReview = (taskId: number, artUrl: string) =>
   post<TaskReview>(`/tasks/${taskId}/reviews`, { art_url: artUrl });
 

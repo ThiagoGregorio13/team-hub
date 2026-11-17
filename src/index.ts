@@ -3,6 +3,7 @@ import { sign, verify } from "hono/jwt";
 import { createMiddleware } from "hono/factory";
 import type { JWTPayload } from "hono/utils/jwt/types";
 import { cors } from "hono/cors";
+import { serveStatic } from "hono/bun";
 import { bearerAuth } from "hono/bearer-auth";
 import { Context } from "hono";
 import { sql } from "bun";
@@ -581,6 +582,46 @@ ORDER BY id DESC
 `;
   return c.json(rows);
 });
+
+// ---------- Upload de artes do computador ----------
+// O arquivo vai para a pasta uploads/ e a rota devolve um link http,
+// que segue o mesmo caminho de um link colado (revisão, mural e análise da IA).
+const UPLOAD_DIR = "uploads";
+const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // o mesmo limite da análise da IA
+const IMAGE_EXTENSIONS: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+// 127.0.0.1 em vez de localhost: no Windows o localhost pode virar IPv6 e falhar
+const PUBLIC_API_URL =
+  process.env.PUBLIC_API_URL ?? `http://127.0.0.1:${process.env.PORT ?? 3000}`;
+
+app.post("/uploads", requireAuth, async (c) => {
+  const body = await c.req.parseBody();
+  const file = body.file;
+
+  if (!(file instanceof File)) {
+    return c.json({ error: "send the image in the 'file' field" }, 400);
+  }
+  const extension = IMAGE_EXTENSIONS[file.type];
+  if (!extension) {
+    return c.json({ error: "only PNG, JPG, WEBP or GIF images" }, 415);
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return c.json({ error: "image too large (max 8MB)" }, 413);
+  }
+
+  // Nome aleatório: evita sobrescrever arquivos e não expõe o nome original
+  const fileName = `${crypto.randomUUID()}.${extension}`;
+  await Bun.write(`${UPLOAD_DIR}/${fileName}`, file);
+
+  return c.json({ url: `${PUBLIC_API_URL}/${UPLOAD_DIR}/${fileName}` }, 201);
+});
+
+// Público de propósito: a tag <img> do mural não envia o token
+app.get(`/${UPLOAD_DIR}/*`, serveStatic({ root: "./" }));
 
 app.post("/tasks/:id/reviews", async (c) => {
   const taskId = Number(c.req.param("id"));

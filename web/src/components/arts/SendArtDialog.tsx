@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { Link2, LoaderCircle, X } from "lucide-react";
-import { ApiError, submitReview, type GalleryArt, type TaskRow } from "../../api";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { Link2, LoaderCircle, Upload, X } from "lucide-react";
+import { ApiError, submitReview, uploadArt, type GalleryArt, type TaskRow } from "../../api";
 import { hostOf } from "./artUtils";
 import { TaskPicker } from "./TaskPicker";
 
@@ -22,6 +22,14 @@ function looksLikeLink(value: string): boolean {
   }
 }
 
+const ACCEPTED_IMAGES = "image/png,image/jpeg,image/webp,image/gif";
+
+function uploadErrorMessage(err: unknown): string {
+  if (err instanceof ApiError && err.status === 413) return "A imagem passa de 8 MB. Escolha um arquivo menor.";
+  if (err instanceof ApiError && err.status === 415) return "Formato não suportado. Use PNG, JPG, WEBP ou GIF.";
+  return "Não foi possível enviar a imagem. Tente de novo.";
+}
+
 // Montado só quando aberto: cada abertura começa com o formulário limpo
 export function SendArtDialog({
   tasks,
@@ -34,8 +42,12 @@ export function SendArtDialog({
   const [taskId, setTaskId] = useState<number | "">(initialTaskId ?? "");
   const [url, setUrl] = useState(initialUrl);
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  // Nome do arquivo escolhido; volta a null se a pessoa editar o link à mão
+  const [uploadedName, setUploadedName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -52,9 +64,27 @@ export function SendArtDialog({
   const valid = looksLikeLink(trimmed);
   const nextVersion = taskId === "" ? 1 : existing.filter((art) => art.task_id === taskId).length + 1;
 
+  async function handleFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    // Limpa o input para que escolher o mesmo arquivo de novo também dispare o onChange
+    event.target.value = "";
+    if (!file) return;
+
+    setUploading(true);
+    setError(null);
+    try {
+      setUrl(await uploadArt(file));
+      setUploadedName(file.name);
+    } catch (err) {
+      setError(uploadErrorMessage(err));
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (taskId === "" || !valid || sending) return;
+    if (taskId === "" || !valid || sending || uploading) return;
 
     setSending(true);
     setError(null);
@@ -115,19 +145,44 @@ export function SendArtDialog({
               type="url"
               inputMode="url"
               value={url}
-              onChange={(event) => setUrl(event.target.value)}
+              onChange={(event) => {
+                setUrl(event.target.value);
+                setUploadedName(null);
+              }}
               placeholder="https://www.figma.com/... ou link da imagem"
               autoComplete="off"
               autoFocus={initialTaskId !== null}
               required
             />
           </div>
-          <small>PNG, JPG ou link do Figma, Drive e Behance.</small>
+          <small>Cole um link (imagem, Figma, Drive ou Behance) ou escolha uma imagem do computador.</small>
         </label>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPTED_IMAGES}
+          onChange={handleFile}
+          hidden
+        />
+        <button
+          type="button"
+          className="art-button art-button--ghost"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading || sending}
+        >
+          {uploading ? (
+            <LoaderCircle className="art-spin" size={16} aria-hidden="true" />
+          ) : (
+            <Upload size={16} aria-hidden="true" />
+          )}
+          {uploading ? "Enviando imagem" : "Escolher do computador"}
+        </button>
 
         {valid && (
           <p className="art-dialog__summary">
-            Vai entrar como <strong>v{nextVersion}</strong>, vindo de <strong>{hostOf(trimmed)}</strong>.
+            Vai entrar como <strong>v{nextVersion}</strong>, vindo de{" "}
+            <strong>{uploadedName ?? hostOf(trimmed)}</strong>.
           </p>
         )}
 
@@ -144,7 +199,7 @@ export function SendArtDialog({
           <button
             type="submit"
             className="art-button art-button--primary"
-            disabled={taskId === "" || !valid || sending}
+            disabled={taskId === "" || !valid || sending || uploading}
           >
             {sending && <LoaderCircle className="art-spin" size={16} aria-hidden="true" />}
             {sending ? "Enviando" : "Enviar para revisão"}
