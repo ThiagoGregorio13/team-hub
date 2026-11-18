@@ -112,7 +112,7 @@ async function downloadImage(uri: string): Promise<InlineImage> {
   try {
     res = await fetch(uri);
   } catch {
-    throw new ImageError("Could not download image", 422);
+    throw new ImageError("could not download the image", 422);
   }
   const mimeType = res.headers.get("content-type")?.split(";")[0] ?? "";
   if (!res.ok || !mimeType.startsWith("image/")) {
@@ -121,7 +121,7 @@ async function downloadImage(uri: string): Promise<InlineImage> {
   const bytes = await res.arrayBuffer();
 
   if (bytes.byteLength > 8 * 1024 * 1024) {
-    throw new ImageError("image too large (MAX 8MB", 413);
+    throw new ImageError("image too large (max 8MB)", 413);
   }
   return { mimeType, data: Buffer.from(bytes).toString("base64") };
 }
@@ -742,8 +742,7 @@ JOIN tasks t ON t.id = r.task_id
     ORDER BY id
   `;
 
-    let image;
-
+    let image: InlineImage;
     try {
       image = await downloadImage(review.art_url);
     } catch (err) {
