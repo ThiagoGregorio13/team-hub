@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Check, Copy, Layers, LoaderCircle, MessageSquareDiff, X } from "lucide-react";
-import { ApiError, decideReview, type GalleryArt, analyzeArt, type ArtAnalysis } from "../../api";
+import { ApiError, decideReview, type GalleryArt, analyzeArt, diffArt, type ArtAnalysis, type ArtDiff } from "../../api";
 import { ArtViewer } from "./ArtViewer";
 import { AiAnalysis } from "./AiAnalysis";
+import { AiDiff } from "./AiDiff";
 import { STATE_LABEL, accentOf, avatarOf, initialsOf, niceName, whenLabel, type MuralItem } from "./artUtils";
 import { inkOn, usePalette } from "./palette";
 
@@ -14,6 +15,15 @@ type ArtDetailProps = {
   onSendNew: () => void;
 };
 
+function diffErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.status === 409) return "Esta é a primeira versão: não há uma anterior para comparar.";
+    if (err.status === 422) return "Não foi possível abrir a imagem de uma das versões.";
+    if (err.status === 413) return "Uma das imagens é grande demais para comparar (máximo de 8 MB).";
+  }
+  return "A comparação com IA não está disponível agora. Tente de novo em alguns instantes.";
+}
+
 export function ArtDetail({ item, admin, onClose, onDecided, onSendNew }: ArtDetailProps) {
   const [selectedId, setSelectedId] = useState(item.latest?.id ?? 0);
   const [asking, setAsking] = useState(false);
@@ -24,6 +34,10 @@ export function ArtDetail({ item, admin, onClose, onDecided, onSendNew }: ArtDet
   const[result, setResult] = useState<ArtAnalysis | null>(null);
   const[loading, setLoading] = useState(false)
     const [analysisError, setAnalysisError] = useState<string | null>(null);
+  // A comparação guarda de qual versão ela é: trocar de versão não mostra o resultado de outra
+  const [diff, setDiff] = useState<{ reviewId: number; result: ArtDiff } | null>(null);
+  const [diffError, setDiffError] = useState<{ reviewId: number; message: string } | null>(null);
+  const [diffLoading, setDiffLoading] = useState(false);
 
   const dialogRef = useRef<HTMLDialogElement>(null);
   
@@ -75,6 +89,20 @@ export function ArtDetail({ item, admin, onClose, onDecided, onSendNew }: ArtDet
       );
     } finally {
       setSending(false);
+    }
+  }
+
+  async function compareVersions() {
+    if (!selected || diffLoading) return;
+    const reviewId = selected.id;
+    setDiffLoading(true);
+    setDiffError(null);
+    try {
+      setDiff({ reviewId, result: await diffArt(item.task.id, reviewId) });
+    } catch (err) {
+      setDiffError({ reviewId, message: diffErrorMessage(err) });
+    } finally {
+      setDiffLoading(false);
     }
   }
 
@@ -172,6 +200,17 @@ export function ArtDetail({ item, admin, onClose, onDecided, onSendNew }: ArtDet
 
           {/* Só a direção usa: o endpoint da análise exige admin */}
           {admin && <AiAnalysis analysis={result} loading={loading} error={analysisError} onAnalyze={analysisAi} />}
+
+          {/* A v1 não tem com o que comparar */}
+          {admin && selected.version > 1 && (
+            <AiDiff
+              diff={diff?.reviewId === selected.id ? diff.result : null}
+              loading={diffLoading}
+              error={diffError?.reviewId === selected.id ? diffError.message : null}
+              previousVersion={selected.version - 1}
+              onCompare={compareVersions}
+            />
+          )}
 
           {selected.comment && (
             <blockquote className="review-note">

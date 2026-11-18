@@ -2,3 +2,4 @@ node_modules
 web
 .env
 requests
+uploads
