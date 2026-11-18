@@ -654,9 +654,9 @@ app.post(
     const reviewId = Number(c.req.param("reviewId"));
 
     const rows = await sql`
-SELECT r.id, r.art_url, t.title, AS task_title
+SELECT r.id, r.art_url, t.title AS task_title
 FROM task_reviews r 
-JOIN tasks t ON t.id  = t.tasks_id
+JOIN tasks t ON t.id = r.task_id
     WHERE r.id = ${reviewId} AND r.task_id = ${taskId}
 `;
 
