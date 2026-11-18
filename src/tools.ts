@@ -33,6 +33,11 @@ export type StatusCount = { status: string; total: number };
 export type MemberCount = { name: string; total: number };
 export type DeliveryTime = { avg_hours: number };
 
+export type NoteRow = {
+  id: number;
+  content: string;
+};
+
 export async function getTasks(): Promise<TaskRow[]> {
   const rows: TaskRow[] = await sql`
     SELECT tasks.id, tasks.title, tasks.status,
@@ -68,7 +73,7 @@ export async function getOverdueTasks(): Promise<TaskRow[]> {
 export async function searchNotes(query: string) {
   const questionVector = JSON.stringify(await embed(query));
   const rows = await sql`
-    SELECT content AS score
+    SELECT id, content, 1 - (embedding <=> ${questionVector}::vector) AS score
     FROM notes
 WHERE 1 - (embedding <=> ${questionVector}::vector) >= ${MIN_SCORE}  
   ORDER BY embedding <=> ${questionVector}::vector 
@@ -139,6 +144,60 @@ export async function addNote(content: string) {
  (${content}, ${questionVector}::vector) 
    ON CONFLICT (content) DO NOTHING
    RETURNING id, content
+  `;
+  return rows[0];
+}
+
+export async function getTasksByTitle(title: string): Promise<TaskRow[]> {
+  const rows: TaskRow[] = await sql`
+SELECT tasks.id, tasks.title, tasks.status, tasks.due_date::text AS due_date, members.name AS member_name
+ FROM tasks
+LEFT JOIN members ON tasks.member_id = members.id
+  WHERE tasks.title ILIKE ${"%" + title + "%"}
+`;
+  return rows;
+}
+
+export async function getTasksByStatus(status: string): Promise<TaskRow[]> {
+  const rows: TaskRow[] = await sql`
+  SELECT tasks.id, tasks.title, tasks.status, tasks.due_date::text AS due_date, members.name AS member_name
+  FROM tasks
+LEFT JOIN members ON tasks.member_id = members.id 
+ WHERE tasks.status = ${status}
+  `;
+  return rows;
+}
+
+export async function addChecklist(title: string, item: string) {
+  const tasks = await getTasksByTitle(title);
+  if (tasks.length === 0)
+    return { error: `no task found with title: ${title}` };
+  if (tasks.length > 1)
+    return {
+      error: "more than one task matches, ask the user which one",
+      tasks,
+    };
+  const task = tasks[0];
+
+  const rows = await sql`
+INSERT INTO task_checklist_items (task_id, title)
+VALUES (${task.id}, ${item})
+RETURNING id, title, done
+`;
+  return { task: task.title, item: rows[0] };
+}
+
+export async function listNotes(): Promise<NoteRow[]> {
+  const rows = await sql`
+  SELECT id, content FROM notes ORDER BY id
+  `;
+  return rows;
+}
+
+export async function getNote(id: number): Promise<NoteRow | undefined> {
+  const rows = await sql`
+  SELECT id, content FROM notes 
+  WHERE id = ${id}
   `;
   return rows[0];
 }
