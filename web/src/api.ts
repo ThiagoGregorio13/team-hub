@@ -304,6 +304,13 @@ export const analyzeArt = (taskId: number, reviewId: number,
 ) =>
   post<ArtAnalysis>(`/tasks/${taskId}/reviews/${reviewId}/ai-analysis`, {});
 
+// O que mudou entre esta versão e a anterior da mesma tarefa
+export type ArtChange = { area: string; before: string; after: string };
+export type ArtDiff = { changes: ArtChange[] };
+
+export const diffArt = (taskId: number, reviewId: number) =>
+  post<ArtDiff>(`/tasks/${taskId}/reviews/${reviewId}/ai-diff`, {});
+
 // ---------- Base de conhecimento (notas que a IA consulta) ----------
 export type Note = { id: number; content: string; created_at?: string };
 export type NoteMatch = { content: string; score: number; relevant: boolean };

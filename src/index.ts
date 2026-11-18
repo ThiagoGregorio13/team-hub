@@ -71,6 +71,17 @@ const requireAdmin = createMiddleware<{ Variables: { user: JWTPayload } }>(
   },
 );
 
+type InlineImage = { mimeType: string; data: string };
+
+class ImageError extends Error {
+  constructor(
+    message: string,
+    public status: 413 | 422,
+  ) {
+    super(message);
+  }
+}
+
 app.use("/tasks/*", requireAuth);
 app.use("/stats/*", requireAuth);
 app.use("/members/*", requireAuth);
@@ -93,6 +104,26 @@ function isHttpUrl(value: unknown): value is string {
   } catch {
     return false;
   }
+}
+
+async function downloadImage(uri: string): Promise<InlineImage> {
+  let res: Response;
+
+  try {
+    res = await fetch(uri);
+  } catch {
+    throw new ImageError("Could not download image", 422);
+  }
+  const mimeType = res.headers.get("content-type")?.split(";")[0] ?? "";
+  if (!res.ok || !mimeType.startsWith("image/")) {
+    throw new ImageError("art_url is not a reachable image", 422);
+  }
+  const bytes = await res.arrayBuffer();
+
+  if (bytes.byteLength > 8 * 1024 * 1024) {
+    throw new ImageError("image too large (MAX 8MB", 413);
+  }
+  return { mimeType, data: Buffer.from(bytes).toString("base64") };
 }
 
 app.get("/tasks", async (c) => {
@@ -711,20 +742,14 @@ JOIN tasks t ON t.id = r.task_id
     ORDER BY id
   `;
 
-    let image: { mimeType: string; data: string };
+    let image;
+
     try {
-      const res = await fetch(review.art_url);
-      const mimeType = res.headers.get("content-type")?.split(";")[0] ?? "";
-      if (!res.ok || !mimeType.startsWith("image/")) {
-        return c.json({ error: "art_url is not a reachable image" }, 422);
-      }
-      const bytes = await res.arrayBuffer();
-      if (bytes.byteLength > 8 * 1024 * 1024) {
-        return c.json({ error: "image too large (max 8MB)" }, 413);
-      }
-      image = { mimeType, data: Buffer.from(bytes).toString("base64") };
-    } catch {
-      return c.json({ error: "could not download the image" }, 422);
+      image = await downloadImage(review.art_url);
+    } catch (err) {
+      if (err instanceof ImageError)
+        return c.json({ error: err.message }, err.status);
+      throw err;
     }
 
     const previous = history.length
@@ -807,6 +832,109 @@ Respond in Brazilian Portuguese. Describe only what is visible; do not invent an
     } catch (error) {
       console.error("Error generating AI feedback", error);
       return c.json({ error: "Failed to generate AI feedback" }, 503);
+    }
+  },
+);
+
+// Compara a versão desta revisão com a anterior da mesma tarefa
+app.post(
+  "/tasks/:id/reviews/:reviewId/ai-diff",
+  requireAdmin,
+  async (c) => {
+    const taskId = Number(c.req.param("id"));
+    const reviewId = Number(c.req.param("reviewId"));
+
+    // A versão atual: a revisão pedida, junto com o título da tarefa
+    const [current] = await sql`
+      SELECT r.id, r.art_url, t.title AS task_title
+      FROM task_reviews r
+      JOIN tasks t ON t.id = r.task_id
+      WHERE r.id = ${reviewId} AND r.task_id = ${taskId}
+    `;
+    if (!current) {
+      return c.json({ error: "review not found" }, 404);
+    }
+
+    // A versão anterior: a revisão mais recente da mesma tarefa antes desta
+    const [previous] = await sql`
+      SELECT id, art_url
+      FROM task_reviews
+      WHERE task_id = ${taskId} AND id < ${reviewId}
+      ORDER BY id DESC
+      LIMIT 1
+    `;
+    if (!previous) {
+      return c.json({ error: "this is the first version, nothing to compare" }, 409);
+    }
+
+    // Baixa as duas imagens ao mesmo tempo
+    let before: InlineImage;
+    let after: InlineImage;
+    try {
+      [before, after] = await Promise.all([
+        downloadImage(previous.art_url),
+        downloadImage(current.art_url),
+      ]);
+    } catch (err) {
+      if (err instanceof ImageError) return c.json({ error: err.message }, err.status);
+      throw err;
+    }
+
+    const prompt = `You compare two versions of an artwork for an art director. You do NOT evaluate or offer opinions; you only describe what changed.
+
+Task: "${current.task_title}"
+
+List every visible change between the previous version and the current version. For each change:
+- area: where in the artwork the change is (e.g., "logo", "title", "background").
+- before: how it looked in the previous version.
+- after: how it looks in the current version.
+
+Include changes in size, position, color, text and elements added or removed. If nothing changed, return an empty list.
+Respond in Brazilian Portuguese. Describe only what is visible; do not invent anything.`;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: MODEL,
+        contents: [
+          {
+            role: "user",
+            // Um rótulo antes de cada imagem: sem ele, o modelo não sabe qual é qual
+            parts: [
+              { text: "Versão anterior:" },
+              { inlineData: before },
+              { text: "Versão atual:" },
+              { inlineData: after },
+              { text: prompt },
+            ],
+          },
+        ],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              changes: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    area: { type: Type.STRING },
+                    before: { type: Type.STRING },
+                    after: { type: Type.STRING },
+                  },
+                  required: ["area", "before", "after"],
+                },
+              },
+            },
+            required: ["changes"],
+          },
+        },
+      });
+
+      return c.json(JSON.parse(response.text ?? "{}"));
+    } catch (error) {
+      console.error("Error generating AI diff", error);
+      return c.json({ error: "Failed to generate AI diff" }, 503);
     }
   },
 );
